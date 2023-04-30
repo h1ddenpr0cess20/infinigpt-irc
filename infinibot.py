@@ -215,7 +215,7 @@ class AIBot(irc.bot.SingleServerIRCBot):
                 time.sleep(1)
                 c.privmsg(self.channel, ".stock to set to stock GPT settings.")
                 time.sleep(3)
-                c.privmsg(self.channel, "Available at https://github.com/h1ddenpr0cess20/jerkbot-irc")
+                c.privmsg(self.channel, "Available at https://github.com/h1ddenpr0cess20/infinibot-irc")
 
 if __name__ == "__main__":
 
@@ -224,7 +224,7 @@ if __name__ == "__main__":
 
     # create the bot and connect to the server
     
-    personality = "a sarcastic jerk"
+    personality = "infinibot" #you can put anything here.  A character, person, personality type, object, concept, use your imagination.
     channel = "#CHANNEL"
     nickname = "NICKNAME"
     password = "PASSWORD"
