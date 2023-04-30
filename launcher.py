@@ -5,7 +5,7 @@ import openai
 openai.api_key = "API_KEY"
 
 # create the bot and connect to the server
-personality = "a sarcastic jerk"
+personality = "infinibot" #you can put anything here.  A character, person, personality type, object, concept, use your imagination.
 channel = "#CHANNEL"
 nickname = "NICKNAME"
 #password = "PASSWORD" #comment out if unregistered
