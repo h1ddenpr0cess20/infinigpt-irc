@@ -1,4 +1,4 @@
-import infinbot as ai
+import infinibot as ai
 import openai
 
 # Set up the OpenAI API client
