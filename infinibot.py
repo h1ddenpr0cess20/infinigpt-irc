@@ -68,7 +68,7 @@ class AIBot(irc.bot.SingleServerIRCBot):
         else:
             c.privmsg(self.channel, sender + ":")
         time.sleep(1)
-
+        #split up the response to fit irc length limit
         lines = response_text.splitlines()
         
         for line in lines:
@@ -79,6 +79,7 @@ class AIBot(irc.bot.SingleServerIRCBot):
             else: 
                 c.privmsg(self.channel, line)    
             time.sleep(2)
+            
         #trim history for token size management
         if len(self.messages) > 14:
             del self.messages[1:3]
