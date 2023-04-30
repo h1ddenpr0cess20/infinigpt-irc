@@ -10,7 +10,7 @@ pip3 install openai irc
 ```
 Get an [OpenAI API](https://platform.openai.com/signup) key 
 
-Fill in the variables for channel, nickname, password and server in ircBotLauncher.py.  
+Fill in the variables for channel, nickname, password and server in launcher.py.  
 Password is optional, but registration is required for some channels.
 
 ## Use
