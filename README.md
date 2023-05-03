@@ -3,6 +3,8 @@ Infinibot is an OpenAI chatbot for IRC (Internet Relay Chat).  It has a great pr
 
 This is a clone of my project, [jerkbot-irc](https://github.com/h1ddenpr0cess20/jerkbot-irc), with a friendlier name and default personality setting.  I think it's less fun, but it may be more appealing to others.
 
+Also available for the Matrix chat protocol at [infinibot-matrix](https://github.com/h1ddenpr0cess20/infinibot-matrix/)
+
 ## Installation
 
 ```
