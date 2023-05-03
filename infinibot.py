@@ -192,7 +192,7 @@ class AIBot(irc.bot.SingleServerIRCBot):
             #reset to default personality    
             if message.startswith(".reset"):
                 self.reset(sender)
-                c.privmsg(self.channel, "Reset to " + self.personality + " for " + sender + ".")
+                c.privmsg(self.channel, "Reset to default for " + sender + ".")
 
             #stock GPT settings    
             if message.startswith(".stock"):
