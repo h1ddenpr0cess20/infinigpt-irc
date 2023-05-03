@@ -225,7 +225,7 @@ if __name__ == "__main__":
 
     # create the bot and connect to the server
     
-    personality = "infinibot" #you can put anything here.  A character, person, personality type, object, concept, use your imagination.
+    personality = "an AI that goes above and beyond, named InfiniBot" #you can put anything here.  A character, person, personality type, object, concept, use your imagination.
     channel = "#CHANNEL"
     nickname = "NICKNAME"
     password = "PASSWORD"
