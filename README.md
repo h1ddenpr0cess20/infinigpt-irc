@@ -5,7 +5,7 @@ This is a clone of my project, [jerkbot-irc](https://github.com/h1ddenpr0cess20/
 
 Also available for the Matrix chat protocol at [infinibot-matrix](https://github.com/h1ddenpr0cess20/infinibot-matrix/)
 
-## Installation
+## Setup
 
 ```
 pip3 install openai irc
