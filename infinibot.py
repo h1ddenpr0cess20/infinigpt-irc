@@ -56,8 +56,8 @@ class ircGPT(irc.bot.SingleServerIRCBot):
             c.privmsg(self.channel, "Token size too large, try .reset")
         except openai.error.APIError:
             c.privmsg(self.channel, "Error")
-        except Exception as e:
-            print(e)
+        except Exception as x:
+            print(x)
         try:
             response_text = response['choices'][0]['message']['content']
         except:
@@ -94,16 +94,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
             flagged = moderate["results"][0]["flagged"] #true or false
         return flagged
 
-    #gets the userlist
-    def on_namreply(self, c, e):
-        userlist = e.arguments[2].split()
-        for name in userlist:
-            for symbol in self.symbols:
-                if name.startswith(symbol):
-                    name = name.lstrip(symbol)
-            if name not in self.users:
-                self.users.append(name)
-                
+              
     #when bot joins network, identify and wait, then join channel   
     def on_welcome(self, c, e):
         #if nick has a password
@@ -119,9 +110,33 @@ class ircGPT(irc.bot.SingleServerIRCBot):
     def on_nicknameinuse(self, c, e):
         #add an underscore if nickname is in use
         c.nick(c.get_nickname() + "_")
-        
-    #def on_join(self, c, e):
-        
+
+    # actions to take when a user joins 
+    # comment this function out if you find it annoying
+    def on_join(self, c, e):
+        sender = e.source
+        sender = sender.split("!")
+        sender = sender[0]
+        greet = f"come up with a unique greeting for the user {sender}"
+        if sender != self.nickname:
+            try:
+                response = openai.ChatCompletion.create(model='gpt-3.5-turbo', messages=[{"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]},
+                                                                                         {"role": "user", "content": greet}])
+                response_text = response['choices'][0]['message']['content']
+            except Exception as x:
+                print(x)
+            time.sleep(3)
+            c.privmsg(self.channel, response_text)
+
+    #gets the userlist
+    def on_namreply(self, c, e):
+        userlist = e.arguments[2].split()
+        for name in userlist:
+            for symbol in self.symbols:
+                if name.startswith(symbol):
+                    name = name.lstrip(symbol)
+            if name not in self.users:
+                self.users.append(name)
 
     #process chat messages
     def on_pubmsg(self, c, e):
