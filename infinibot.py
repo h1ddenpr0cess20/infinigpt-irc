@@ -205,20 +205,18 @@ class ircGPT(irc.bot.SingleServerIRCBot):
 
             #help menu    
             if message.startswith(".help {}".format(self.nickname)):
-                c.privmsg(self.channel, "I am an OpenAI chatbot.  I can have any personality you want me to have.  Each user has their own chat history and personality setting.")
-                time.sleep(1)
-                c.privmsg(self.channel, f".ai <message> or {self.nickname}: <message> to talk to me.")
-                time.sleep(1)
-                c.privmsg(self.channel, ".x <user> <message> to talk to another user's history for collaboration.")
-                time.sleep(1)
-                c.privmsg(self.channel, ".persona <personality> to change my personality. I can be any personality type, character, inanimate object, place, concept.")
-                time.sleep(1)
-                c.privmsg(self.channel, f".reset to reset to my default personality, {self.personality}.")
-                time.sleep(1)
-                c.privmsg(self.channel, ".stock to set to stock GPT settings.")
-                time.sleep(2)
-                c.privmsg(self.channel, "Available at https://github.com/h1ddenpr0cess20/infinibot-irc")
+                help = [
+                    "I am an OpenAI chatbot.  I can have any personality you want me to have.  Each user has their own chat history and personality setting.",
+                    f".ai <message> or {self.nickname}: <message> to talk to me.", ".x <user> <message> to talk to another user's history for collaboration.",
+                    ".persona <personality> to change my personality. I can be any personality type, character, inanimate object, place, concept.",
+                    f".reset to reset to my default personality, {self.personality}.", ".stock to set to stock GPT settings.", 
+                    "Available at https://github.com/h1ddenpr0cess20/infinibot-irc"
 
+                ]
+                for line in help:
+                    c.privmsg(self.channel, line)
+                    time.sleep(1)
+                
 if __name__ == "__main__":
 
     # Set up the OpenAI API client
