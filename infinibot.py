@@ -5,7 +5,7 @@ import textwrap
 import threading
 
   
-class AIBot(irc.bot.SingleServerIRCBot):
+class ircGPT(irc.bot.SingleServerIRCBot):
     def __init__(self, personality, channel, nickname, server, password=None, port=6667):
         irc.bot.SingleServerIRCBot.__init__(self, [(server, port)], nickname, nickname)
         
@@ -20,6 +20,8 @@ class AIBot(irc.bot.SingleServerIRCBot):
         
         self.symbols = {"@", "+", "%", "&", "~"} #symbols for ops and voiced, need to strip them from nicks
 
+        self.prompt = ("assume the personality of ", ".  roleplay and always stay in character unless instructed otherwise.  keep your first response short.")
+
     #resets bot to preset personality per user    
     def reset(self, sender):
         self.messages[sender].clear()
@@ -31,7 +33,7 @@ class AIBot(irc.bot.SingleServerIRCBot):
         if sender in self.messages:
             self.messages[sender].clear()
         #my personally engineered prompt
-        personality = "assume the personality of " + persona + ". roleplay and always stay in character unless instructed otherwise.  keep your first response short."
+        personality = self.prompt[0] + persona + self.prompt[1]
         self.add_history("system", sender, personality)
 
     #adds messages to self.messages    
@@ -43,7 +45,7 @@ class AIBot(irc.bot.SingleServerIRCBot):
                 self.messages[sender] = [{"role": role, "content": message}]
             else:
                 self.messages[sender] = [
-                    {"role": "system", "content": "assume the personality of " + self.personality + ".  roleplay and always stay in character unless instructed otherwise.  keep your first response short."},
+                    {"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]},
                     {"role": role, "content": message}]
 
     #respond with gpt-3.5-turbo           
@@ -106,13 +108,13 @@ class AIBot(irc.bot.SingleServerIRCBot):
     def on_welcome(self, c, e):
         #if nick has a password
         if self.password != None:
-          c.privmsg("NickServ", "IDENTIFY {}".format(self.password))
+          c.privmsg(f"NickServ", "IDENTIFY {self.password}")
           #wait for identify to finish
-          time.sleep(7)
+          time.sleep(5)
         
         c.join(self.channel)
         #optional join message
-        c.privmsg(self.channel, "I'm an OpenAI chatbot.  Type .help {} for more info".format(self.nickname))
+        c.privmsg(self.channel, f"I'm an OpenAI chatbot.  Type .help {self.nickname} for more info")
         
     def on_nicknameinuse(self, c, e):
         #add an underscore if nickname is in use
@@ -120,7 +122,6 @@ class AIBot(irc.bot.SingleServerIRCBot):
         
     #def on_join(self, c, e):
         
-        #add AI generated greeting here
 
     #process chat messages
     def on_pubmsg(self, c, e):
@@ -150,7 +151,7 @@ class AIBot(irc.bot.SingleServerIRCBot):
                 #moderation   
                 flagged = self.moderate(message)
                 if flagged:
-                    c.privmsg(self.channel, sender + ": This message violates OpenAI terms of use and was not sent")
+                    c.privmsg(self.channel, f"{sender}: This message violates OpenAI terms of use and was not sent")
                 else:
                     #add to history and start responder thread
                     self.add_history("user", sender, message)
@@ -181,7 +182,7 @@ class AIBot(irc.bot.SingleServerIRCBot):
                 #check if it violates ToS
                 flagged = self.moderate(message)
                 if flagged:
-                    c.privmsg(self.channel, sender + ": This persona violates OpenAI terms of use and was not set.")
+                    c.privmsg(self.channel, f"{sender}: This persona violates OpenAI terms of use and was not set.")
                 else:
                     self.persona(message, sender)
                     thread = threading.Thread(target=self.respond, args=(c, sender, self.messages[sender]))
@@ -192,7 +193,7 @@ class AIBot(irc.bot.SingleServerIRCBot):
             #reset to default personality    
             if message.startswith(".reset"):
                 self.reset(sender)
-                c.privmsg(self.channel, "Reset to default for " + sender + ".")
+                c.privmsg(self.channel, f"{self.nickname} reset to default for {sender}.")
 
             #stock GPT settings    
             if message.startswith(".stock"):
@@ -200,22 +201,22 @@ class AIBot(irc.bot.SingleServerIRCBot):
                     self.messages[sender].clear()
                 else:
                     self.messages[sender] = []                    
-                c.privmsg(self.channel, "Stock settings applied for " + sender + ".")
+                c.privmsg(self.channel, f"Stock settings applied for {sender}")
 
             #help menu    
             if message.startswith(".help {}".format(self.nickname)):
                 c.privmsg(self.channel, "I am an OpenAI chatbot.  I can have any personality you want me to have.  Each user has their own chat history and personality setting.")
                 time.sleep(1)
-                c.privmsg(self.channel, ".ai <message> or {}: <message> to talk to me.".format(self.nickname))
+                c.privmsg(self.channel, f".ai <message> or {self.nickname}: <message> to talk to me.")
                 time.sleep(1)
                 c.privmsg(self.channel, ".x <user> <message> to talk to another user's history for collaboration.")
                 time.sleep(1)
                 c.privmsg(self.channel, ".persona <personality> to change my personality. I can be any personality type, character, inanimate object, place, concept.")
                 time.sleep(1)
-                c.privmsg(self.channel, ".reset to reset to my default personality, {}.".format(self.personality))
+                c.privmsg(self.channel, f".reset to reset to my default personality, {self.personality}.")
                 time.sleep(1)
                 c.privmsg(self.channel, ".stock to set to stock GPT settings.")
-                time.sleep(3)
+                time.sleep(2)
                 c.privmsg(self.channel, "Available at https://github.com/h1ddenpr0cess20/infinibot-irc")
 
 if __name__ == "__main__":
@@ -233,9 +234,9 @@ if __name__ == "__main__":
     
     #checks if password variable exists (comment it out if unregistered)
     try:
-      bot = AIBot(personality, channel, nickname, server, password)
+      infinibot = ircGPT(personality, channel, nickname, server, password)
     except:
-      bot = AIBot(personality, channel, nickname, server)
+      infinibot = ircGPT(personality, channel, nickname, server)
       
-    bot.start()
+    infinibot.start()
 
