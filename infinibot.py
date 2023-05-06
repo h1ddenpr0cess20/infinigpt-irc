@@ -17,8 +17,6 @@ class ircGPT(irc.bot.SingleServerIRCBot):
 
         self.messages = {} #Holds chat history
         self.users = [] #List of users in the channel
-        
-        self.symbols = {"@", "+", "%", "&", "~"} #symbols for ops and voiced, need to strip them from nicks
 
         self.prompt = ("assume the personality of ", ".  roleplay and always stay in character unless instructed otherwise.  keep your first response short.")
 
@@ -70,9 +68,9 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         else:
             c.privmsg(self.channel, sender + ":")
         time.sleep(1)
-        #split up the response to fit irc length limit
-        lines = response_text.splitlines()
         
+        #split up the response to fit irc length limit
+        lines = response_text.splitlines()    
         for line in lines:
             if len(line) > 420:
                     newlines = textwrap.wrap(line, width=420, drop_whitespace=False, replace_whitespace=False, fix_sentence_endings=True, break_long_words=False)
@@ -113,26 +111,27 @@ class ircGPT(irc.bot.SingleServerIRCBot):
 
     # actions to take when a user joins 
     # comment this function out if you find it annoying
-    def on_join(self, c, e):
-        sender = e.source
-        sender = sender.split("!")
-        sender = sender[0]
-        greet = f"come up with a unique greeting for the user {sender}"
-        if sender != self.nickname:
-            try:
-                response = openai.ChatCompletion.create(model='gpt-3.5-turbo', messages=[{"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]},
-                                                                                         {"role": "user", "content": greet}])
-                response_text = response['choices'][0]['message']['content']
-            except Exception as x:
-                print(x)
-            time.sleep(3)
-            c.privmsg(self.channel, response_text)
+    # def on_join(self, c, e):
+    #     user = e.source
+    #     user = user.split("!")
+    #     user = user[0]
+    #     greet = f"come up with a unique greeting for the user {user}"
+    #     if sender != self.nickname:
+    #         try:
+    #             response = openai.ChatCompletion.create(model='gpt-3.5-turbo', messages=[{"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]},
+    #                                                                                      {"role": "user", "content": greet}])
+    #             response_text = response['choices'][0]['message']['content']
+    #         except Exception as x:
+    #             print(x)
+    #         time.sleep(5)
+    #         c.privmsg(self.channel, response_text)
 
     #gets the userlist
     def on_namreply(self, c, e):
+        symbols = {"@", "+", "%", "&", "~"} #symbols for ops and voiced
         userlist = e.arguments[2].split()
         for name in userlist:
-            for symbol in self.symbols:
+            for symbol in symbols:
                 if name.startswith(symbol):
                     name = name.lstrip(symbol)
             if name not in self.users:
@@ -219,7 +218,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
                 c.privmsg(self.channel, f"Stock settings applied for {sender}")
 
             #help menu    
-            if message.startswith(".help {}".format(self.nickname)):
+            if message.startswith(f".help {self.nickname}"):
                 help = [
                     "I am an OpenAI chatbot.  I can have any personality you want me to have.  Each user has their own chat history and personality setting.",
                     f".ai <message> or {self.nickname}: <message> to talk to me.", ".x <user> <message> to talk to another user's history for collaboration.",
