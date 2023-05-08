@@ -58,9 +58,10 @@ class ircGPT(irc.bot.SingleServerIRCBot):
             print(x)
         try:
             response_text = response['choices'][0]['message']['content']
+            self.add_history("assistant", sender, response_text)
         except:
             c.privmsg(self.channel, "Something went wrong, try again.")
-        self.add_history("assistant", sender, response_text)
+        
         #if .x function used
         if sender2:
             c.privmsg(self.channel, sender2 + ":")
@@ -68,7 +69,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         else:
             c.privmsg(self.channel, sender + ":")
         time.sleep(1)
-        
+
         #split up the response to fit irc length limit
         lines = response_text.splitlines()    
         for line in lines:
@@ -135,7 +136,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
                 if name.startswith(symbol):
                     name = name.lstrip(symbol)
             if name not in self.users:
-                self.users.append(name)
+                self.users.append(name)       
 
     #process chat messages
     def on_pubmsg(self, c, e):
