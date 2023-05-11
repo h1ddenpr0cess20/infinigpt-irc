@@ -1,8 +1,6 @@
 # infinibot-irc
 Infinibot is an OpenAI chatbot for IRC (Internet Relay Chat).  It has a great prompt which allows it to roleplay as almost anything you can think of.  You can set any default personality you would like.  It can be changed at any time, and each user has their own separate chat history with their chosen personality setting.  Users can interact with each others chat histories for collaboration if they would like, but otherwise, conversations are separated.
 
-This is a clone of my project, [jerkbot-irc](https://github.com/h1ddenpr0cess20/jerkbot-irc), with a friendlier name and default personality setting.  I think it's less fun, but it may be more appealing to others.
-
 Also available for the Matrix chat protocol at [infinibot-matrix](https://github.com/h1ddenpr0cess20/infinibot-matrix/)
 
 ## Setup
