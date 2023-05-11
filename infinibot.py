@@ -1,3 +1,11 @@
+'''
+Infinibot-IRC
+    An OpenAI GPT-3.5-Turbo chatbot for internet relay chat with infinite personalities
+    written by Dustin Whyte
+    April 2023
+
+'''
+
 import irc.bot
 import openai
 import time
@@ -18,6 +26,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         self.messages = {} #Holds chat history
         self.users = [] #List of users in the channel
 
+        # prompt parts (this prompt was engineered by me and works almost always)
         self.prompt = ("assume the personality of ", ".  roleplay and always stay in character unless instructed otherwise.  keep your first response short.")
 
     #resets bot to preset personality per user    
@@ -30,7 +39,6 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         #clear existing history
         if sender in self.messages:
             self.messages[sender].clear()
-        #my personally engineered prompt
         personality = self.prompt[0] + persona + self.prompt[1]
         self.add_history("system", sender, personality)
 
@@ -105,17 +113,23 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         c.join(self.channel)
         #optional join message
         c.privmsg(self.channel, f"I'm an OpenAI chatbot.  Type .help {self.nickname} for more info")
+
+        # get users in channel
+        c.send_raw("NAMES " + self.channel)
         
     def on_nicknameinuse(self, c, e):
         #add an underscore if nickname is in use
         c.nick(c.get_nickname() + "_")
 
     # actions to take when a user joins 
-    # comment this function out if you find it annoying
-    # def on_join(self, c, e):
-    #     user = e.source
-    #     user = user.split("!")
-    #     user = user[0]
+    def on_join(self, c, e):
+        user = e.source
+        user = user.split("!")
+        user = user[0]
+        if user not in self.users:
+            self.users.append(user)
+
+    # Optional greeting for when a user joins        
     #     greet = f"come up with a unique greeting for the user {user}"
     #     if sender != self.nickname:
     #         try:
@@ -127,7 +141,8 @@ class ircGPT(irc.bot.SingleServerIRCBot):
     #         time.sleep(5)
     #         c.privmsg(self.channel, response_text)
 
-    #gets the userlist
+
+    # Get the users in the channel
     def on_namreply(self, c, e):
         symbols = {"@", "+", "%", "&", "~"} #symbols for ops and voiced
         userlist = e.arguments[2].split()
@@ -140,9 +155,6 @@ class ircGPT(irc.bot.SingleServerIRCBot):
 
     #process chat messages
     def on_pubmsg(self, c, e):
-        #get the users in channel each time a message is sent
-        c.send_raw("NAMES " + self.channel)
-
         #message parts
         message = e.arguments[0]
         sender = e.source
@@ -238,11 +250,10 @@ if __name__ == "__main__":
     openai.api_key = "API_KEY"
 
     # create the bot and connect to the server
-    
-    personality = "an AI that goes above and beyond, named InfiniBot" #you can put anything here.  A character, person, personality type, object, concept, use your imagination.
+    personality = "an AI that goes above and beyond, named InfiniBot" #you can put anything here.  A character, person, personality type, object, concept, emoji, etc
     channel = "#CHANNEL"
     nickname = "NICKNAME"
-    password = "PASSWORD"
+    #password = "PASSWORD"
     server = "SERVER"
     
     #checks if password variable exists (comment it out if unregistered)
