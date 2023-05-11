@@ -110,13 +110,22 @@ class ircGPT(irc.bot.SingleServerIRCBot):
           #wait for identify to finish
           time.sleep(5)
         
+        #join channel
         c.join(self.channel)
-        #optional join message
-        c.privmsg(self.channel, f"I'm an OpenAI chatbot.  Type .help {self.nickname} for more info")
-
+              
         # get users in channel
         c.send_raw("NAMES " + self.channel)
-        
+
+        #optional join message
+        greet = "introduce yourself"
+        try:
+            response = openai.ChatCompletion.create(model='gpt-3.5-turbo', messages=[{"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]},
+                                                                                        {"role": "user", "content": greet}])
+            response_text = response['choices'][0]['message']['content']
+            c.privmsg(self.channel, response_text + f"  Type .help {self.nickname} to learn how to use me.")
+        except:
+            pass
+            
     def on_nicknameinuse(self, c, e):
         #add an underscore if nickname is in use
         c.nick(c.get_nickname() + "_")
@@ -130,18 +139,17 @@ class ircGPT(irc.bot.SingleServerIRCBot):
             self.users.append(user)
 
     # Optional greeting for when a user joins        
-    #     greet = f"come up with a unique greeting for the user {user}"
-    #     if sender != self.nickname:
-    #         try:
-    #             response = openai.ChatCompletion.create(model='gpt-3.5-turbo', messages=[{"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]},
-    #                                                                                      {"role": "user", "content": greet}])
-    #             response_text = response['choices'][0]['message']['content']
-    #         except Exception as x:
-    #             print(x)
-    #         time.sleep(5)
-    #         c.privmsg(self.channel, response_text)
-
-
+        # greet = f"come up with a unique greeting for the user {user}"
+        # if sender != self.nickname:
+        #     try:
+        #         response = openai.ChatCompletion.create(model='gpt-3.5-turbo', messages=[{"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]},
+        #                                                                                  {"role": "user", "content": greet}])
+        #         response_text = response['choices'][0]['message']['content']
+        #         time.sleep(5)
+        #         c.privmsg(self.channel, response_text)
+        #     except:
+        #         pass
+            
     # Get the users in the channel
     def on_namreply(self, c, e):
         symbols = {"@", "+", "%", "&", "~"} #symbols for ops and voiced
@@ -250,7 +258,7 @@ if __name__ == "__main__":
     openai.api_key = "API_KEY"
 
     # create the bot and connect to the server
-    personality = "an AI that goes above and beyond, named InfiniBot" #you can put anything here.  A character, person, personality type, object, concept, emoji, etc
+    personality = "an AI that can assume any personality, named InfiniGPT"  #you can put anything here.  A character, person, personality type, object, concept, emoji, etc
     channel = "#CHANNEL"
     nickname = "NICKNAME"
     #password = "PASSWORD"
