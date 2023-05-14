@@ -12,7 +12,6 @@ import time
 import textwrap
 import threading
 
-  
 class ircGPT(irc.bot.SingleServerIRCBot):
     def __init__(self, personality, channel, nickname, server, password=None, port=6667):
         irc.bot.SingleServerIRCBot.__init__(self, [(server, port)], nickname, nickname)
@@ -81,7 +80,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
                     c.privmsg(self.channel, line)    
                 time.sleep(2)
 
-        except Exception as x: #improve this later with specific errors
+        except Exception as x: #improve this later with specific errors (token error, invalid request error etc)
             c.privmsg(self.channel, "Something went wrong, try again.")
             print(x)
 
