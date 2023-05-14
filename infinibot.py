@@ -58,37 +58,33 @@ class ircGPT(irc.bot.SingleServerIRCBot):
     def respond(self, c, sender, message, sender2=None):
         try:
             response = openai.ChatCompletion.create(model='gpt-3.5-turbo', messages=self.messages[sender])
-        except openai.error.InvalidRequestError:
-            c.privmsg(self.channel, "Token size too large, try .reset")
-        except openai.error.APIError:
-            c.privmsg(self.channel, "Error")
-        except Exception as x:
-            print(x)
-        try:
             response_text = response['choices'][0]['message']['content']
-            self.add_history("assistant", sender, response_text)
-        except:
-            c.privmsg(self.channel, "Something went wrong, try again.")
-        
-        #if .x function used
-        if sender2:
-            c.privmsg(self.channel, sender2 + ":")
-        #normal .ai usage
-        else:
-            c.privmsg(self.channel, sender + ":")
-        time.sleep(1)
-
-        #split up the response to fit irc length limit
-        lines = response_text.splitlines()    
-        for line in lines:
-            if len(line) > 420:
-                    newlines = textwrap.wrap(line, width=420, drop_whitespace=False, replace_whitespace=False, fix_sentence_endings=True, break_long_words=False)
-                    for line in newlines:
-                        c.privmsg(self.channel, line)
-            else: 
-                c.privmsg(self.channel, line)    
-            time.sleep(2)
             
+            self.add_history("assistant", sender, response_text)
+        
+            #if .x function used
+            if sender2:
+                c.privmsg(self.channel, sender2 + ":")
+            #normal .ai usage
+            else:
+                c.privmsg(self.channel, sender + ":")
+            time.sleep(1)
+
+            #split up the response to fit irc length limit
+            lines = response_text.splitlines()    
+            for line in lines:
+                if len(line) > 420:
+                        newlines = textwrap.wrap(line, width=420, drop_whitespace=False, replace_whitespace=False, fix_sentence_endings=True, break_long_words=False)
+                        for line in newlines:
+                            c.privmsg(self.channel, line)
+                else: 
+                    c.privmsg(self.channel, line)    
+                time.sleep(2)
+
+        except Exception as x: #improve this later with specific errors
+            c.privmsg(self.channel, "Something went wrong, try again.")
+            print(x)
+
         #trim history for token size management
         if len(self.messages) > 14:
             del self.messages[1:3]
