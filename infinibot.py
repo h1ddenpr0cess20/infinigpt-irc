@@ -30,8 +30,9 @@ class ircGPT(irc.bot.SingleServerIRCBot):
 
     #resets bot to preset personality per user    
     def reset(self, sender):
-        self.messages[sender].clear()
-        self.persona(self.personality, sender)
+        if sender in self.messages:
+            self.messages[sender].clear()
+            self.persona(self.personality, sender)
 
     #sets the bot personality 
     def persona(self, persona, sender):
