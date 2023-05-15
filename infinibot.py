@@ -55,14 +55,14 @@ class ircGPT(irc.bot.SingleServerIRCBot):
 
     #respond with gpt-3.5-turbo           
     def respond(self, c, sender, message, sender2=None):
-            #add username before response
-            #if .x function used
-            if sender2:
-                c.privmsg(self.channel, sender2 + ":")
-            #normal .ai usage
-            else:
-                c.privmsg(self.channel, sender + ":")
-            time.sleep(2)
+        #add username before response
+        #if .x function used
+        if sender2:
+            c.privmsg(self.channel, sender2 + ":")
+        #normal .ai usage
+        else:
+            c.privmsg(self.channel, sender + ":")
+        time.sleep(1)
 
         #try to use the API (fails sometimes)
         try:
@@ -200,10 +200,12 @@ class ircGPT(irc.bot.SingleServerIRCBot):
             if message.startswith(".x "):
                 message = message.lstrip(".x")
                 message = message.strip()
+                #check if the message starts with a name in the history
                 for name in self.users:
                     if type(name) == str and message.startswith(name):
                         user = name
                         message = message.lstrip(user)
+                        #if so, respond, otherwise ignore
                         if user in self.messages:
                             self.add_history("user", user, message)
                             thread = threading.Thread(target=self.respond, args=(c, user, self.messages[user],), kwargs={'sender2': sender})
