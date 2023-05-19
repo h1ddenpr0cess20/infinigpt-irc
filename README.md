@@ -15,7 +15,7 @@ Password is optional, but registration is required for some channels.
 
 ## Use
 ```
-python3 ircBotLauncher.py
+python3 launcher.py
 ```
 **.ai _message_ or botname: _message_**
     Basic usage.
