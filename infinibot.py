@@ -56,15 +56,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
 
     #respond with gpt-3.5-turbo           
     def respond(self, c, sender, message, sender2=None):
-        #add username before response
-        #if .x function used
-        if sender2:
-            c.privmsg(self.channel, sender2 + ":")
-        #normal .ai usage
-        else:
-            c.privmsg(self.channel, sender + ":")
-        time.sleep(1)
-
+        
         #try to use the API (fails sometimes)
         try:
             response = openai.ChatCompletion.create(model='gpt-3.5-turbo', messages=self.messages[sender])
@@ -76,7 +68,16 @@ class ircGPT(irc.bot.SingleServerIRCBot):
 
             #add the response text to the history before breaking it up
             self.add_history("assistant", sender, response_text)
-        
+
+            #add username before response
+            #if .x function used
+            if sender2:
+                c.privmsg(self.channel, sender2 + ":")
+            #normal .ai usage
+            else:
+                c.privmsg(self.channel, sender + ":")
+            time.sleep(1)
+            
             #split up the response to fit irc length limit
             lines = response_text.splitlines()    
             for line in lines:
