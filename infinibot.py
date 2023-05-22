@@ -77,7 +77,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
             else:
                 c.privmsg(self.channel, sender + ":")
             time.sleep(1)
-            
+
             #split up the response to fit irc length limit
             lines = response_text.splitlines()    
             for line in lines:
@@ -86,8 +86,8 @@ class ircGPT(irc.bot.SingleServerIRCBot):
                         for line in newlines:
                             c.privmsg(self.channel, line)
                 else: 
-                    c.privmsg(self.channel, line)    
-                time.sleep(2)
+                    c.privmsg(self.channel, line)
+                time.sleep(2)   
         except Exception as x: #improve this later with specific errors (token error, invalid request error etc)
             c.privmsg(self.channel, "Something went wrong, try again.")
             print(x)
@@ -100,10 +100,12 @@ class ircGPT(irc.bot.SingleServerIRCBot):
     def moderate(self, message):
         flagged = False
         if not flagged:
-            moderate = openai.Moderation.create(input=message,) #run through the moderation endpoint
-            flagged = moderate["results"][0]["flagged"] #true or false
+            try:
+                moderate = openai.Moderation.create(input=message,) #run through the moderation endpoint
+                flagged = moderate["results"][0]["flagged"] #true or false
+            except:
+                pass
         return flagged
-
               
     #when bot joins network, identify and wait, then join channel   
     def on_welcome(self, c, e):
@@ -190,8 +192,12 @@ class ircGPT(irc.bot.SingleServerIRCBot):
                 flagged = self.moderate(message)
                 if flagged:
                     c.privmsg(self.channel, f"{sender}: This message violates OpenAI terms of use and was not sent")
+                    
+                    #add way to ignore user after a certain number of violations 
+                    #maybe like 3 flagged messages gets you ignored for a while
+
                 else:
-                    #add to history and start responder thread
+                    #add to history and start respond thread
                     self.add_history("user", sender, message)
                     thread = threading.Thread(target=self.respond, args=(c, sender, self.messages[sender]))
                     thread.start()
@@ -209,11 +215,17 @@ class ircGPT(irc.bot.SingleServerIRCBot):
                         message = message.lstrip(user)
                         #if so, respond, otherwise ignore
                         if user in self.messages:
-                            self.add_history("user", user, message)
-                            thread = threading.Thread(target=self.respond, args=(c, user, self.messages[user],), kwargs={'sender2': sender})
-                            thread.start()
-                            thread.join(timeout=30)
-                            time.sleep(2)
+                            flagged = self.moderate(message)
+                            if flagged:
+                                c.privmsg(self.channel, f"{sender}: This message violates OpenAI terms of use and was not sent")
+                                #add way to ignore user after a certain number of violations
+
+                            else:
+                                self.add_history("user", user, message)
+                                thread = threading.Thread(target=self.respond, args=(c, user, self.messages[user],), kwargs={'sender2': sender})
+                                thread.start()
+                                thread.join(timeout=30)
+                                time.sleep(2)
                             
             #change personality    
             if message.startswith(".persona "):
@@ -223,6 +235,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
                 flagged = self.moderate(message)
                 if flagged:
                     c.privmsg(self.channel, f"{sender}: This persona violates OpenAI terms of use and was not set.")
+                    #add way to ignore user after a certain number of violations
                 else:
                     self.persona(message, sender)
                     thread = threading.Thread(target=self.respond, args=(c, sender, self.messages[sender]))
