@@ -3,6 +3,8 @@ InfiniGPT is an OpenAI chatbot for IRC (Internet Relay Chat).  It has a great pr
 
 Also available for the Matrix chat protocol at [infinigpt-matrix](https://github.com/h1ddenpr0cess20/infinigpt-matrix/)
 
+Previously known as Infinibot, but I discovered a Discord bot was already using that name.
+
 ## Setup
 
 ```
