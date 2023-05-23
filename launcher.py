@@ -1,4 +1,4 @@
-import infinibot
+import infinigpt
 import openai
 
 # Set up the OpenAI API client
@@ -12,8 +12,8 @@ server = "SERVER"
 
 #check if there is a password
 try:
-    infinibot = infinibot.ircGPT(personality, channel, nickname, server, password)
+    infinigpt = infinigpt.ircGPT(personality, channel, nickname, server, password)
 except:
-    infinibot = infinibot.ircGPT(personality, channel, nickname, server)
+    infinigpt = infinigpt.ircGPT(personality, channel, nickname, server)
     
-infinibot.start()
+infinigpt.start()

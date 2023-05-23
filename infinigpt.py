@@ -1,5 +1,5 @@
 '''
-Infinibot-IRC
+InfiniGPT-IRC
     An OpenAI GPT-3.5-Turbo chatbot for internet relay chat with infinite personalities
     written by Dustin Whyte
     April 2023
@@ -284,9 +284,9 @@ if __name__ == "__main__":
     
     #checks if password variable exists (comment it out if unregistered)
     try:
-      infinibot = ircGPT(personality, channel, nickname, server, password)
+      infiniGPT = ircGPT(personality, channel, nickname, server, password)
     except:
-      infinibot = ircGPT(personality, channel, nickname, server)
+      infiniGPT = ircGPT(personality, channel, nickname, server)
       
-    infinibot.start()
+    infiniGPT.start()
 
