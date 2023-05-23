@@ -263,7 +263,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
                     f".ai <message> or {self.nickname}: <message> to talk to me.", ".x <user> <message> to talk to another user's history for collaboration.",
                     ".persona <personality> to change my personality. I can be any personality type, character, inanimate object, place, concept.",
                     f".reset to reset to my default personality, {self.personality}.", ".stock to set to stock GPT settings.", 
-                    "Available at https://github.com/h1ddenpr0cess20/infinibot-irc"
+                    "Available at https://github.com/h1ddenpr0cess20/infinigpt-irc"
 
                 ]
                 for line in help:
