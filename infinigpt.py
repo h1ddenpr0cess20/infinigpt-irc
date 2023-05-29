@@ -63,6 +63,8 @@ class ircGPT(irc.bot.SingleServerIRCBot):
             response = openai.ChatCompletion.create(model='gpt-3.5-turbo', messages=self.messages[sender])
             response_text = response['choices'][0]['message']['content']
             
+            response_text = response_text.strip("{stay in character}")
+            
             #removes any unwanted quotation marks from responses
             if response_text.startswith('"') and response_text.endswith('"'):
                 response_text = response_text.strip('"')
