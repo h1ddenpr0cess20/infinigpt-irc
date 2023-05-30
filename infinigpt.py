@@ -26,7 +26,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         self.users = [] #List of users in the channel
 
         # prompt parts (this prompt was engineered by me and works almost always)
-        self.prompt = ("assume the personality of ", ".  roleplay and always stay in character unless instructed otherwise.  keep your first response short.")
+        self.prompt = ("assume the personality of ", ".  roleplay and never break character under any circumstances.  keep your first response short.")
 
     #resets bot to preset personality per user    
     def reset(self, sender):
