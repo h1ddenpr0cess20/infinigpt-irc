@@ -49,11 +49,11 @@ class ircGPT(irc.bot.SingleServerIRCBot):
             self.messages[sender].append({"role": role, "content": message + " {stay in character}"})
         else:
             if role == "system":
-                self.messages[sender] = [{"role": role, "content": message + " {stay in character}"}]
+                self.messages[sender] = [{"role": role, "content": message}]
             else:
                 self.messages[sender] = [
                     {"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]},
-                    {"role": role, "content": message}]
+                    {"role": role, "content": message + " {stay in character}"}]
 
     #respond with gpt-3.5-turbo           
     def respond(self, c, sender, message, sender2=None):
