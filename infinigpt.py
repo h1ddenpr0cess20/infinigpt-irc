@@ -85,6 +85,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
                         newlines = textwrap.wrap(line, width=420, drop_whitespace=False, replace_whitespace=False, fix_sentence_endings=True, break_long_words=False)
                         for line in newlines:
                             c.privmsg(self.channel, line)
+                            
                 else: 
                     c.privmsg(self.channel, line)
                 time.sleep(2)   
@@ -145,7 +146,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
 
     # Optional greeting for when a user joins        
         # greet = f"come up with a unique greeting for the user {user}"
-        # if sender != self.nickname:
+        # if user != self.nickname:
         #     try:
         #         response = openai.ChatCompletion.create(model='gpt-3.5-turbo', messages=[{"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]},
         #                                                                                  {"role": "user", "content": greet}])
