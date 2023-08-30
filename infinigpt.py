@@ -25,8 +25,11 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         self.messages = {} #Holds chat history
         self.users = [] #List of users in the channel
 
+        #set model, change to gpt-4 if you want to spend a lot
+        self.model = 'gpt-3.5-turbo'
+
         # prompt parts (this prompt was engineered by me and works almost always)
-        self.prompt = ("assume the personality of ", ".  roleplay and never break character.  do not use the word 'interlocutor' under any circumstances.  keep your first response short.")
+        self.prompt = ("assume the personality of ", ".  act as them and never break character.  do not use the word 'interlocutor' under any circumstances.  keep your first response short.")
 
     #resets bot to preset personality per user    
     def reset(self, sender):
@@ -41,6 +44,13 @@ class ircGPT(irc.bot.SingleServerIRCBot):
             self.messages[sender].clear()
         personality = self.prompt[0] + persona + self.prompt[1]
         self.add_history("system", sender, personality)
+
+    #set a custom prompt (such as one from awesome-chatgpt-prompts)
+    def custom(self, prompt, sender):
+        #clear existing history
+        if sender in self.messages:
+            self.messages[sender].clear()
+        self.add_history("system", sender, prompt)
 
     #adds messages to self.messages    
     def add_history(self, role, sender, message):
@@ -59,7 +69,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         
         #try to use the API (fails sometimes)
         try:
-            response = openai.ChatCompletion.create(model='gpt-3.5-turbo', messages=self.messages[sender])
+            response = openai.ChatCompletion.create(model=self.model, messages=self.messages[sender])
             response_text = response['choices'][0]['message']['content']
             
             #removes any unwanted quotation marks from responses
@@ -125,8 +135,9 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         #optional join message
         greet = "introduce yourself"
         try:
-            response = openai.ChatCompletion.create(model='gpt-3.5-turbo', messages=[{"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]},
-                                                                                        {"role": "user", "content": greet}])
+            response = openai.ChatCompletion.create(model=self.model, 
+                    messages=[{"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]},
+                    {"role": "user", "content": greet}])
             response_text = response['choices'][0]['message']['content']
             c.privmsg(self.channel, response_text + f"  Type .help {self.nickname} to learn how to use me.")
         except:
@@ -148,8 +159,8 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         # greet = f"come up with a unique greeting for the user {user}"
         # if user != self.nickname:
         #     try:
-        #         response = openai.ChatCompletion.create(model='gpt-3.5-turbo', messages=[{"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]},
-        #                                                                                  {"role": "user", "content": greet}])
+        #         response = openai.ChatCompletion.create(model=self.model, 
+        #                 messages=[{"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]}, {"role": "user", "content": greet}])
         #         response_text = response['choices'][0]['message']['content']
         #         time.sleep(5)
         #         c.privmsg(self.channel, response_text)
@@ -190,7 +201,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
                     message = message.strip()
 
                 #moderation   
-                flagged = self.moderate(message)
+                flagged = self.moderate(message)  #set to False if you want to bypass moderation
                 if flagged:
                     c.privmsg(self.channel, f"{sender}: This message violates OpenAI terms of use and was not sent")
                     
@@ -216,7 +227,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
                         message = message.lstrip(user)
                         #if so, respond, otherwise ignore
                         if user in self.messages:
-                            flagged = self.moderate(message)
+                            flagged = self.moderate(message)  #set to False if you want to bypass moderation
                             if flagged:
                                 c.privmsg(self.channel, f"{sender}: This message violates OpenAI terms of use and was not sent")
                                 #add way to ignore user after a certain number of violations
@@ -233,12 +244,28 @@ class ircGPT(irc.bot.SingleServerIRCBot):
                 message = message.lstrip(".persona")
                 message = message.strip()
                 #check if it violates ToS
-                flagged = self.moderate(message)
+                flagged = self.moderate(message) #set to False if you want to bypass moderation
                 if flagged:
                     c.privmsg(self.channel, f"{sender}: This persona violates OpenAI terms of use and was not set.")
                     #add way to ignore user after a certain number of violations
                 else:
                     self.persona(message, sender)
+                    thread = threading.Thread(target=self.respond, args=(c, sender, self.messages[sender]))
+                    thread.start()
+                    thread.join(timeout=30)
+                    time.sleep(2)
+
+            #use custom prompts 
+            if message.startswith(".custom "):
+                message = message.lstrip(".custom")
+                message = message.strip()
+                #check if it violates ToS
+                flagged = self.moderate(message) #set to False if you want to bypass moderation
+                if flagged:
+                    c.privmsg(self.channel, f"{sender}: This custom prompt violates OpenAI terms of use and was not set.")
+                    #add way to ignore user after a certain number of violations
+                else:
+                    self.custom(message, sender)
                     thread = threading.Thread(target=self.respond, args=(c, sender, self.messages[sender]))
                     thread.start()
                     thread.join(timeout=30)
@@ -262,13 +289,14 @@ class ircGPT(irc.bot.SingleServerIRCBot):
                 help = [
                     "I am an OpenAI chatbot.  I can have any personality you want me to have.  Each user has their own chat history and personality setting.",
                     f".ai <message> or {self.nickname}: <message> to talk to me.", ".x <user> <message> to talk to another user's history for collaboration.",
-                    ".persona <personality> to change my personality. I can be any personality type, character, inanimate object, place, concept.",
-                    f".reset to reset to my default personality, {self.personality}.", ".stock to set to stock GPT settings.", 
+                    ".persona <personality> to change my personality. I can be any personality type, character, inanimate object, place, concept.", 
+                    ".custom <prompt> to use a custom prompt instead of a persona",
+                    ".stock to set to stock GPT settings.", f".reset to reset to my default personality, {self.personality}.",  
                     "Available at https://github.com/h1ddenpr0cess20/infinigpt-irc"
 
                 ]
                 for line in help:
-                    c.privmsg(self.channel, line)
+                    c.notice(sender, line)
                     time.sleep(1)
                 
 if __name__ == "__main__":
