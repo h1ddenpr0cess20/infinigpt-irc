@@ -122,7 +122,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
     def on_welcome(self, c, e):
         #if nick has a password
         if self.password != None:
-          c.privmsg(f"NickServ", "IDENTIFY {self.password}")
+          c.privmsg("NickServ", f"IDENTIFY {self.password}")
           #wait for identify to finish
           time.sleep(5)
         
