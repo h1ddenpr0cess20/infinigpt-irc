@@ -64,10 +64,8 @@ class ircGPT(irc.bot.SingleServerIRCBot):
                     {"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]},
                     {"role": role, "content": message}]
 
-    #respond with gpt-3.5-turbo           
+    #respond with GPT model           
     def respond(self, c, sender, message, sender2=None):
-        
-        #try to use the API (fails sometimes)
         try:
             response = openai.ChatCompletion.create(model=self.model, messages=self.messages[sender])
             response_text = response['choices'][0]['message']['content']
@@ -92,7 +90,12 @@ class ircGPT(irc.bot.SingleServerIRCBot):
             lines = response_text.splitlines()    
             for line in lines:
                 if len(line) > 420:
-                        newlines = textwrap.wrap(line, width=420, drop_whitespace=False, replace_whitespace=False, fix_sentence_endings=True, break_long_words=False)
+                        newlines = textwrap.wrap(line, 
+                                                 width=420, 
+                                                 drop_whitespace=False, 
+                                                 replace_whitespace=False, 
+                                                 fix_sentence_endings=True, 
+                                                 break_long_words=False)
                         for line in newlines:
                             c.privmsg(self.channel, line)
                             
@@ -190,18 +193,11 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         if sender != self.nickname:
             #basic use
             if message.startswith(".ai") or message.startswith(self.nickname):
-                if message.startswith(".ai"):
-                    message = message.lstrip(".ai")
-                    message = message.strip()
-                else:
-                    message = message.lstrip(self.nickname)
-                    #allows both botname: <message> and botname <message> to work
-                    if message.startswith(":"):
-                        message.lstrip(":")
-                    message = message.strip()
+                m = message.split(" ", 1)
+                m = m[1]
 
                 #moderation   
-                flagged = self.moderate(message)  #set to False if you want to bypass moderation
+                flagged = self.moderate(m)  #set to False if you want to bypass moderation
                 if flagged:
                     c.privmsg(self.channel, f"{sender}: This message violates OpenAI terms of use and was not sent")
                     
@@ -210,7 +206,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
 
                 else:
                     #add to history and start respond thread
-                    self.add_history("user", sender, message)
+                    self.add_history("user", sender, m)
                     thread = threading.Thread(target=self.respond, args=(c, sender, self.messages[sender]))
                     thread.start()
                     thread.join(timeout=30)
@@ -218,38 +214,43 @@ class ircGPT(irc.bot.SingleServerIRCBot):
 
             #collborative use
             if message.startswith(".x "):
-                message = message.lstrip(".x")
-                message = message.strip()
-                #check if the message starts with a name in the history
-                for name in self.users:
-                    if type(name) == str and message.startswith(name):
-                        user = name
-                        message = message.lstrip(user)
-                        #if so, respond, otherwise ignore
-                        if user in self.messages:
-                            flagged = self.moderate(message)  #set to False if you want to bypass moderation
-                            if flagged:
-                                c.privmsg(self.channel, f"{sender}: This message violates OpenAI terms of use and was not sent")
-                                #add way to ignore user after a certain number of violations
+                m = message.split(" ", 2)
+                m.pop(0)
+                if len(m) > 1:
+                    #get users in channel
+                    c.send_raw("NAMES " + self.channel)
 
-                            else:
-                                self.add_history("user", user, message)
-                                thread = threading.Thread(target=self.respond, args=(c, user, self.messages[user],), kwargs={'sender2': sender})
-                                thread.start()
-                                thread.join(timeout=30)
-                                time.sleep(2)
+                    #check if the message starts with a name in the history
+                    for name in self.users:
+                        if type(name) == str and m[0] == name:
+                            user = m[0]
+                            m = m[1]
+                            
+                            #if so, respond, otherwise ignore
+                            if user in self.messages:
+                                flagged = self.moderate(m)  #set to False if you want to bypass moderation
+                                if flagged:
+                                    c.privmsg(self.channel, f"{sender}: This message violates OpenAI terms of use and was not sent")
+                                    #add way to ignore user after a certain number of violations
+
+                                else:
+                                    self.add_history("user", user, m)
+                                    thread = threading.Thread(target=self.respond, args=(c, user, self.messages[user],), kwargs={'sender2': sender})
+                                    thread.start()
+                                    thread.join(timeout=30)
+                                    time.sleep(2)
                             
             #change personality    
             if message.startswith(".persona "):
-                message = message.lstrip(".persona")
-                message = message.strip()
+                m = message.split(" ", 1)
+                m = m[1]
                 #check if it violates ToS
-                flagged = self.moderate(message) #set to False if you want to bypass moderation
+                flagged = self.moderate(m) #set to False if you want to bypass moderation
                 if flagged:
                     c.privmsg(self.channel, f"{sender}: This persona violates OpenAI terms of use and was not set.")
                     #add way to ignore user after a certain number of violations
                 else:
-                    self.persona(message, sender)
+                    self.persona(m, sender)
                     thread = threading.Thread(target=self.respond, args=(c, sender, self.messages[sender]))
                     thread.start()
                     thread.join(timeout=30)
@@ -257,15 +258,15 @@ class ircGPT(irc.bot.SingleServerIRCBot):
 
             #use custom prompts 
             if message.startswith(".custom "):
-                message = message.lstrip(".custom")
-                message = message.strip()
+                m = message.split(" ", 1)
+                m = m[1]
                 #check if it violates ToS
-                flagged = self.moderate(message) #set to False if you want to bypass moderation
+                flagged = self.moderate(m) #set to False if you want to bypass moderation
                 if flagged:
                     c.privmsg(self.channel, f"{sender}: This custom prompt violates OpenAI terms of use and was not set.")
                     #add way to ignore user after a certain number of violations
                 else:
-                    self.custom(message, sender)
+                    self.custom(m, sender)
                     thread = threading.Thread(target=self.respond, args=(c, sender, self.messages[sender]))
                     thread.start()
                     thread.join(timeout=30)
