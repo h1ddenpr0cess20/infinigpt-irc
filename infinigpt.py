@@ -29,7 +29,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         self.model = 'gpt-3.5-turbo'
 
         # prompt parts (this prompt was engineered by me and works almost always)
-        self.prompt = ("assume the personality of ", ".  act as them and never break character.  do not use the word 'interlocutor' under any circumstances.  keep your first response short.")
+        self.prompt = ("assume the personality of ", ".  act as them and never break character. keep your first response short.")
 
     #resets bot to preset personality per user    
     def reset(self, sender):
@@ -98,10 +98,11 @@ class ircGPT(irc.bot.SingleServerIRCBot):
                                                  break_long_words=False)
                         for line in newlines:
                             c.privmsg(self.channel, line)
+                            time.sleep(2)
                             
                 else: 
                     c.privmsg(self.channel, line)
-                time.sleep(2)   
+                    time.sleep(2)   
         except Exception as x: #improve this later with specific errors (token error, invalid request error etc)
             c.privmsg(self.channel, "Something went wrong, try again.")
             print(x)
