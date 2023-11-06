@@ -27,7 +27,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         self.users = [] #List of users in the channel
 
         #set model, change to gpt-4-1106-preview if you want to use gpt-4-turbo
-        self.model = 'gpt-3.5-turbo'
+        self.model = 'gpt-3.5-turbo-1106'
 
         # prompt parts (this prompt was engineered by me and works almost always)
         self.prompt = ("assume the personality of ", ".  roleplay as them and never break character.  keep your responses short.")
