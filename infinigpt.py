@@ -7,14 +7,15 @@ InfiniGPT-IRC
 '''
 
 import irc.bot
-import openai
+from openai import OpenAI
 import time
 import textwrap
 import threading
 
 class ircGPT(irc.bot.SingleServerIRCBot):
-    def __init__(self, personality, channel, nickname, server, password=None, port=6667):
+    def __init__(self, api_key, personality, channel, nickname, server, password=None, port=6667):
         irc.bot.SingleServerIRCBot.__init__(self, [(server, port)], nickname, nickname)
+        self.client = OpenAI(api_key=api_key)
         
         self.personality = personality
         self.channel = channel
@@ -25,7 +26,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         self.messages = {} #Holds chat history
         self.users = [] #List of users in the channel
 
-        #set model, change to gpt-4 if you want to spend a lot
+        #set model, change to gpt-4-1106-preview if you want to use gpt-4-turbo
         self.model = 'gpt-3.5-turbo'
 
         # prompt parts (this prompt was engineered by me and works almost always)
@@ -67,8 +68,8 @@ class ircGPT(irc.bot.SingleServerIRCBot):
     #respond with GPT model           
     def respond(self, c, sender, message, sender2=None):
         try:
-            response = openai.ChatCompletion.create(model=self.model, messages=self.messages[sender])
-            response_text = response['choices'][0]['message']['content']
+            response = self.client.chat.completions.create(model=self.model, messages=self.messages[sender])
+            response_text = response.choices[0].message.content
             
             #removes any unwanted quotation marks from responses
             if response_text.startswith('"') and response_text.endswith('"'):
@@ -116,7 +117,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         flagged = False
         if not flagged:
             try:
-                moderate = openai.Moderation.create(input=message,) #run through the moderation endpoint
+                moderate = self.client.moderations.create(input=message,) #run through the moderation endpoint
                 flagged = moderate["results"][0]["flagged"] #true or false
             except:
                 pass
@@ -139,10 +140,10 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         #optional join message
         greet = "introduce yourself"
         try:
-            response = openai.ChatCompletion.create(model=self.model, 
+            response = self.client.chat.completions.create(model=self.model, 
                     messages=[{"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]},
                     {"role": "user", "content": greet}])
-            response_text = response['choices'][0]['message']['content']
+            response_text = response.choices[0].message.content
             c.privmsg(self.channel, response_text + f"  Type .help {self.nickname} to learn how to use me.")
         except:
             pass
@@ -163,9 +164,9 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         # greet = f"come up with a unique greeting for the user {user}"
         # if user != self.nickname:
         #     try:
-        #         response = openai.ChatCompletion.create(model=self.model, 
+        #         response = self.client.chat.completions.create(model=self.model, 
         #                 messages=[{"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]}, {"role": "user", "content": greet}])
-        #         response_text = response['choices'][0]['message']['content']
+        #         response_text = response.choices[0].message.content
         #         time.sleep(5)
         #         c.privmsg(self.channel, response_text)
         #     except:
@@ -304,7 +305,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
 if __name__ == "__main__":
 
     # Set up the OpenAI API client
-    openai.api_key = "API_KEY"
+    api_key = "API_KEY"
 
     # create the bot and connect to the server
     personality = "an AI that can assume any personality, named InfiniGPT"  #you can put anything here.  A character, person, personality type, object, concept, emoji, etc
@@ -315,9 +316,9 @@ if __name__ == "__main__":
     
     #checks if password variable exists (comment it out if unregistered)
     try:
-      infiniGPT = ircGPT(personality, channel, nickname, server, password)
+      infiniGPT = ircGPT(api_key, personality, channel, nickname, server, password)
     except:
-      infiniGPT = ircGPT(personality, channel, nickname, server)
+      infiniGPT = ircGPT(api_key, personality, channel, nickname, server)
       
     infiniGPT.start()
 
