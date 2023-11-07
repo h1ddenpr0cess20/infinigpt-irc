@@ -109,8 +109,8 @@ class ircGPT(irc.bot.SingleServerIRCBot):
             print(x)
 
         #trim history for token size management
-        if len(self.messages) > 14:
-            del self.messages[1:3]
+        if len(self.messages[sender]) > 20:
+            del self.messages[sender][1:3]
         
     #run message through moderation endpoint for ToS check        
     def moderate(self, message):
