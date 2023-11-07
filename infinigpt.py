@@ -30,7 +30,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         self.model = 'gpt-3.5-turbo-1106'
 
         # prompt parts (this prompt was engineered by me and works almost always)
-        self.prompt = ("assume the personality of ", ".  roleplay as them and never break character.  keep your responses short.")
+        self.prompt = ("assume the personality of ", ".  roleplay as them and never break character.  keep your responses short, between one word and one paragraph.")
 
     #resets bot to preset personality per user    
     def reset(self, sender):
@@ -118,7 +118,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         if not flagged:
             try:
                 moderate = self.client.moderations.create(input=message,) #run through the moderation endpoint
-                flagged = moderate["results"][0]["flagged"] #true or false
+                flagged = moderate.results[0].flagged #true or false
             except:
                 pass
         return flagged
