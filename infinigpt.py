@@ -30,8 +30,26 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         self.model = 'gpt-3.5-turbo-1106'
 
         # prompt parts (this prompt was engineered by me and works almost always)
-        self.prompt = ("assume the personality of ", ".  roleplay as them and never break character.  keep your responses relatively short.")
+        self.prompt = ("assume the personality of ", ".  roleplay as them and never break character unless asked.  keep your responses relatively short.")
+    
+    def chop(self, message):
+        lines = message.splitlines()
+        newlines = []  # Initialize an empty list to store wrapped lines
 
+        for line in lines:
+            if len(line) > 420:
+                wrapped_lines = textwrap.wrap(line,
+                                            width=420,
+                                            drop_whitespace=False,
+                                            replace_whitespace=False,
+                                            fix_sentence_endings=True,
+                                            break_long_words=False)
+                newlines.extend(wrapped_lines)  # Extend the list with wrapped lines
+            else:
+                newlines.append(line)  # Add the original line to the list
+
+        return newlines  # Return the list of wrapped lines
+    
     #resets bot to preset personality per user    
     def reset(self, sender):
         if sender in self.messages:
@@ -88,22 +106,11 @@ class ircGPT(irc.bot.SingleServerIRCBot):
             time.sleep(1)
 
             #split up the response to fit irc length limit
-            lines = response_text.splitlines()    
+            lines = self.chop(response_text)
             for line in lines:
-                if len(line) > 420:
-                        newlines = textwrap.wrap(line, 
-                                                 width=420, 
-                                                 drop_whitespace=False, 
-                                                 replace_whitespace=False, 
-                                                 fix_sentence_endings=True, 
-                                                 break_long_words=False)
-                        for line in newlines:
-                            c.privmsg(self.channel, line)
-                            time.sleep(2)
-                            
-                else: 
-                    c.privmsg(self.channel, line)
-                    time.sleep(2)   
+                c.privmsg(self.channel, line)
+                time.sleep(2)
+
         except Exception as x: #improve this later with specific errors (token error, invalid request error etc)
             c.privmsg(self.channel, "Something went wrong, try again.")
             print(x)
@@ -144,7 +151,10 @@ class ircGPT(irc.bot.SingleServerIRCBot):
                     messages=[{"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]},
                     {"role": "user", "content": greet}])
             response_text = response.choices[0].message.content
-            c.privmsg(self.channel, response_text + f"  Type .help {self.nickname} to learn how to use me.")
+            lines = self.chop(response_text + f"  Type .help {self.nickname} to learn how to use me.")
+            for line in lines:
+                c.privmsg(self.channel, line)
+                time.sleep(2)
         except:
             pass
             
@@ -168,7 +178,10 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         #                 messages=[{"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]}, {"role": "user", "content": greet}])
         #         response_text = response.choices[0].message.content
         #         time.sleep(5)
-        #         c.privmsg(self.channel, response_text)
+        #         lines = self.chop(response_text)
+        #         for line in lines:
+        #             c.privmsg(self.channel, line)
+        #             time.sleep(2)
         #     except:
         #         pass
             
