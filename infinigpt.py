@@ -11,12 +11,16 @@ from openai import OpenAI
 import time
 import textwrap
 import threading
+import os
 
 class ircGPT(irc.bot.SingleServerIRCBot):
     def __init__(self, api_key, personality, channel, nickname, server, password=None, port=6667):
         irc.bot.SingleServerIRCBot.__init__(self, [(server, port)], nickname, nickname)
-        self.client = OpenAI(api_key=api_key)
+        self.openai = OpenAI(api_key=api_key)
         
+        #uncomment to use Ollama instead of OpenAI
+        #self.openai.base_url = 'http://localhost:11434/v1'
+
         self.personality = personality
         self.channel = channel
         self.server = server
@@ -26,8 +30,10 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         self.messages = {} #Holds chat history
         self.users = [] #List of users in the channel
 
-        #set model, change to gpt-4-1106-preview if you want to use gpt-4-turbo
-        self.model = 'gpt-3.5-turbo-1106'
+        #set model, change to gpt-4-turbo-preview if you want to use gpt-4-turbo
+        #change to an Ollama model name if using Ollama, eg "mistral"
+        self.model = 'gpt-3.5-turbo' 
+
 
         # prompt parts (this prompt was engineered by me and works almost always)
         self.prompt = ("assume the personality of ", ".  roleplay as them and never break character unless asked.  keep your responses relatively short.")
@@ -86,7 +92,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
     #respond with GPT model           
     def respond(self, c, sender, message, sender2=None):
         try:
-            response = self.client.chat.completions.create(model=self.model, messages=self.messages[sender])
+            response = self.openai.chat.completions.create(model=self.model, messages=self.messages[sender])
             response_text = response.choices[0].message.content
             
             #removes any unwanted quotation marks from responses
@@ -124,7 +130,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         flagged = False
         if not flagged:
             try:
-                moderate = self.client.moderations.create(input=message,) #run through the moderation endpoint
+                moderate = self.openai.moderations.create(input=message,) #run through the moderation endpoint
                 flagged = moderate.results[0].flagged #true or false
             except:
                 pass
@@ -147,7 +153,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         #optional join message
         greet = "introduce yourself"
         try:
-            response = self.client.chat.completions.create(model=self.model, 
+            response = self.openai.chat.completions.create(model=self.model, 
                     messages=[{"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]},
                     {"role": "user", "content": greet}])
             response_text = response.choices[0].message.content
@@ -174,7 +180,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
         # greet = f"come up with a unique greeting for the user {user}"
         # if user != self.nickname:
         #     try:
-        #         response = self.client.chat.completions.create(model=self.model, 
+        #         response = self.openai.chat.completions.create(model=self.model, 
         #                 messages=[{"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]}, {"role": "user", "content": greet}])
         #         response_text = response.choices[0].message.content
         #         time.sleep(5)
@@ -316,9 +322,10 @@ class ircGPT(irc.bot.SingleServerIRCBot):
                     time.sleep(1)
                 
 if __name__ == "__main__":
+    #put a key here and uncomment if not already set in environment
+    #os.environ['OPENAI_API_KEY'] = "api_key"
 
-    # Set up the OpenAI API client
-    api_key = "API_KEY"
+    api_key = os.environ.get("OPENAI_API_KEY")
 
     # create the bot and connect to the server
     personality = "an AI that can assume any personality, named InfiniGPT"  #you can put anything here.  A character, person, personality type, object, concept, emoji, etc
