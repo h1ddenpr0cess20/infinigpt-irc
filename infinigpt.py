@@ -13,26 +13,39 @@ import textwrap
 import threading
 import os
 
-class ircGPT(irc.bot.SingleServerIRCBot):
-    def __init__(self, api_key, personality, channel, nickname, server, password=None, port=6667):
+class infiniGPT(irc.bot.SingleServerIRCBot):
+    def __init__(self, admin, api_key, personality, channel, nickname, server, password=None, port=6667):
         irc.bot.SingleServerIRCBot.__init__(self, [(server, port)], nickname, nickname)
         self.openai = OpenAI(api_key=api_key)
         
-        #uncomment to use Ollama instead of OpenAI
-        #self.openai.base_url = 'http://localhost:11434/v1'
-
         self.personality = personality
         self.channel = channel
         self.server = server
         self.nickname = nickname
         self.password = password
+        self.admin = admin
 
         self.messages = {} #Holds chat history
         self.users = [] #List of users in the channel
 
-        #set model, change to gpt-4-turbo-preview if you want to use gpt-4-turbo
-        #change to an Ollama model name if using Ollama, eg "mistral"
-        self.model = 'gpt-3.5-turbo' 
+        #add your desired ollama models and gpt models here
+        self.models = [
+            'gpt-3.5-turbo',
+            'gpt-4-turbo-preview',
+            'codellama',
+            'dolphin-mistral',
+            'gemma',
+            'llama2',
+            'mistral',
+            'orca2',
+            'solar',
+            'stablelm2',
+            'starling-lm',
+            'zephyr'
+            ]
+
+        #set model 
+        self.change_model("gpt-3.5-turbo") 
 
 
         # prompt parts (this prompt was engineered by me and works almost always)
@@ -44,17 +57,26 @@ class ircGPT(irc.bot.SingleServerIRCBot):
 
         for line in lines:
             if len(line) > 420:
-                wrapped_lines = textwrap.wrap(line,
-                                            width=420,
-                                            drop_whitespace=False,
-                                            replace_whitespace=False,
-                                            fix_sentence_endings=True,
-                                            break_long_words=False)
+                wrapped_lines = textwrap.wrap(
+                    line,
+                    width=420,
+                    drop_whitespace=False,
+                    replace_whitespace=False,
+                    fix_sentence_endings=True,
+                    break_long_words=False)
                 newlines.extend(wrapped_lines)  # Extend the list with wrapped lines
             else:
                 newlines.append(line)  # Add the original line to the list
 
         return newlines  # Return the list of wrapped lines
+    
+    def change_model(self, modelname):
+        if modelname.startswith("gpt"):
+            self.openai.base_url = 'https://api.openai.com/v1'
+        else:
+            self.openai.base_url = 'http://localhost:11434/v1'
+
+        self.model = self.models[self.models.index(modelname)]
     
     #resets bot to preset personality per user    
     def reset(self, sender):
@@ -231,7 +253,7 @@ class ircGPT(irc.bot.SingleServerIRCBot):
                     thread = threading.Thread(target=self.respond, args=(c, sender, self.messages[sender]))
                     thread.start()
                     thread.join(timeout=30)
-                    time.sleep(2) #help prevent mixing user output
+                    time.sleep(2) #help prevent mixing different users' output
 
             #collborative use
             if message.startswith(".x "):
@@ -305,6 +327,19 @@ class ircGPT(irc.bot.SingleServerIRCBot):
                 else:
                     self.messages[sender] = []                    
                 c.privmsg(self.channel, f"Stock settings applied for {sender}")
+            
+            #list models
+            if message == ".model":
+                c.privmsg(self.channel, f"Current model: {self.model}")
+                c.privmsg(self.channel, "Available models: " + ", ".join(self.models))
+            #change model if admin
+            if message.startswith(".model ") and sender == self.admin:
+                model = message.split(" ", 1)[1]
+                if model in self.models:
+                    self.change_model(model)
+                    c.privmsg(self.channel, f"Model set to {self.model}")
+                else:
+                    c.privmsg(self.channel, "Try again")
 
             #help menu    
             if message.startswith(f".help {self.nickname}"):
@@ -333,12 +368,14 @@ if __name__ == "__main__":
     nickname = "NICKNAME"
     #password = "PASSWORD"
     server = "SERVER"
+    #bot owner
+    admin = 'botowner'
     
     #checks if password variable exists (comment it out if unregistered)
     try:
-      infiniGPT = ircGPT(api_key, personality, channel, nickname, server, password)
+      infiniGPT = infiniGPT(admin, api_key, personality, channel, nickname, server, password)
     except:
-      infiniGPT = ircGPT(api_key, personality, channel, nickname, server)
+      infiniGPT = infiniGPT(admin, api_key, personality, channel, nickname, server)
       
     infiniGPT.start()
 
