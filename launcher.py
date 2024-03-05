@@ -1,4 +1,4 @@
-import infinigpt
+from infinigpt import infiniGPT
 import os
 
 #put a key here and uncomment if not already set in environment
@@ -13,11 +13,13 @@ channel = "CHANNEL"
 nickname = "NICKNAME"
 #password = "PASSWORD" #comment out if unregistered
 server = "SERVER"
+#bot owner
+admin = "botowner"
 
 #check if there is a password
 try:
-    infinigpt = infinigpt.ircGPT(api_key, personality, channel, nickname, server, password)
+    infinigpt = infiniGPT(admin, api_key, personality, channel, nickname, server, password)
 except:
-    infinigpt = infinigpt.ircGPT(api_key, personality, channel, nickname, server)
+    infinigpt = infiniGPT(admin, api_key, personality, channel, nickname, server)
     
 infinigpt.start()
