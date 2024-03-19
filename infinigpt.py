@@ -12,6 +12,7 @@ import time
 import textwrap
 import threading
 import os
+#import ollama
 
 class infiniGPT(irc.bot.SingleServerIRCBot):
     def __init__(self, admin, api_key, personality, channel, nickname, server, password=None, port=6667):
@@ -37,6 +38,7 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
             'gemma',
             'llama2',
             'mistral',
+            'openchat',
             'orca2',
             'solar',
             'stablelm2',
@@ -44,8 +46,22 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
             'zephyr'
             ]
 
+        #alternatively create list automatically from all installed models using ollama-python
+        # def model_list():
+        #     models = ollama.list()
+
+        #     model_list = sorted([model['name'].removesuffix(":latest") for model in models['models']])
+        #     model_list.insert(0,"gpt-3.5-turbo")
+        #     model_list.insert(1,"gpt-4-turbo-preview")
+
+        #     return model_list
+
+        # self.models = model_list()
+
         #set model 
-        self.change_model("gpt-3.5-turbo") 
+        #change to the name of an Ollama model if using Ollama, for example "zephyr"
+        self.default_model = "gpt-3.5-turbo"
+        self.change_model(self.default_model) 
 
 
         # prompt parts (this prompt was engineered by me and works almost always)
@@ -111,15 +127,19 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
                     {"role": "system", "content": self.prompt[0] + self.personality + self.prompt[1]},
                     {"role": role, "content": message}]
 
-    #respond with GPT model           
+    #respond with an AI model           
     def respond(self, c, sender, message, sender2=None):
         try:
-            response = self.openai.chat.completions.create(model=self.model, messages=self.messages[sender])
+            response = self.openai.chat.completions.create(
+                model=self.model, 
+                messages=self.messages[sender])
+            
             response_text = response.choices[0].message.content
             
             #removes any unwanted quotation marks from responses
-            if response_text.startswith('"') and response_text.endswith('"'):
-                response_text = response_text.strip('"')
+            # if response_text.startswith('"') and response_text.endswith('"'):
+            #     response_text = response_text.strip('"')  
+            #doesn't work.  figure out later
 
             #add the response text to the history before breaking it up
             self.add_history("assistant", sender, response_text)
@@ -149,7 +169,9 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
         
     #run message through moderation endpoint for ToS check        
     def moderate(self, message):
-        flagged = False
+        #defaults to false, will return false every time when using ollama
+        #if you want to moderate everything, rewrite this to set the base url to openai
+        flagged = False 
         if not flagged:
             try:
                 moderate = self.openai.moderations.create(input=message,) #run through the moderation endpoint
@@ -188,7 +210,10 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
             
     def on_nicknameinuse(self, c, e):
         #add an underscore if nickname is in use
-        c.nick(c.get_nickname() + "_")
+        try:
+            c.nick(c.get_nickname() + "1")
+        except:
+            c.nick(c.get_nickname() + "2")
 
     # actions to take when a user joins 
     def on_join(self, c, e):
@@ -236,11 +261,11 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
         if sender != self.nickname:
             #basic use
             if message.startswith(".ai") or message.startswith(self.nickname):
-                m = message.split(" ", 1)
-                m = m[1]
+                msg = message.split(" ", 1)
+                msg = msg[1]
 
                 #moderation   
-                flagged = self.moderate(m)  #set to False if you want to bypass moderation
+                flagged = self.moderate(msg)  #set to False if you want to bypass moderation
                 if flagged:
                     c.privmsg(self.channel, f"{sender}: This message violates OpenAI terms of use and was not sent")
                     
@@ -249,7 +274,7 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
 
                 else:
                     #add to history and start respond thread
-                    self.add_history("user", sender, m)
+                    self.add_history("user", sender, msg)
                     thread = threading.Thread(target=self.respond, args=(c, sender, self.messages[sender]))
                     thread.start()
                     thread.join(timeout=30)
@@ -257,27 +282,27 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
 
             #collborative use
             if message.startswith(".x "):
-                m = message.split(" ", 2)
-                m.pop(0)
-                if len(m) > 1:
+                msg = message.split(" ", 2)
+                msg.pop(0)
+                if len(msg) > 1:
                     #get users in channel
                     c.send_raw("NAMES " + self.channel)
 
                     #check if the message starts with a name in the history
                     for name in self.users:
-                        if type(name) == str and m[0] == name:
-                            user = m[0]
-                            m = m[1]
+                        if type(name) == str and msg[0] == name:
+                            user = msg[0]
+                            msg = msg[1]
                             
                             #if so, respond, otherwise ignore
                             if user in self.messages:
-                                flagged = self.moderate(m)  #set to False if you want to bypass moderation
+                                flagged = self.moderate(msg)  #set to False if you want to bypass moderation
                                 if flagged:
                                     c.privmsg(self.channel, f"{sender}: This message violates OpenAI terms of use and was not sent")
                                     #add way to ignore user after a certain number of violations
 
                                 else:
-                                    self.add_history("user", user, m)
+                                    self.add_history("user", user, msg)
                                     thread = threading.Thread(target=self.respond, args=(c, user, self.messages[user],), kwargs={'sender2': sender})
                                     thread.start()
                                     thread.join(timeout=30)
@@ -285,15 +310,15 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
                             
             #change personality    
             if message.startswith(".persona "):
-                m = message.split(" ", 1)
-                m = m[1]
+                msg = message.split(" ", 1)
+                msg = msg[1]
                 #check if it violates ToS
-                flagged = self.moderate(m) #set to False if you want to bypass moderation
+                flagged = self.moderate(msg) #set to False if you want to bypass moderation
                 if flagged:
                     c.privmsg(self.channel, f"{sender}: This persona violates OpenAI terms of use and was not set.")
                     #add way to ignore user after a certain number of violations
                 else:
-                    self.persona(m, sender)
+                    self.persona(msg, sender)
                     thread = threading.Thread(target=self.respond, args=(c, sender, self.messages[sender]))
                     thread.start()
                     thread.join(timeout=30)
@@ -301,15 +326,15 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
 
             #use custom prompts 
             if message.startswith(".custom "):
-                m = message.split(" ", 1)
-                m = m[1]
+                msg = message.split(" ", 1)
+                msg = msg[1]
                 #check if it violates ToS
-                flagged = self.moderate(m) #set to False if you want to bypass moderation
+                flagged = self.moderate(msg) #set to False if you want to bypass moderation
                 if flagged:
                     c.privmsg(self.channel, f"{sender}: This custom prompt violates OpenAI terms of use and was not set.")
                     #add way to ignore user after a certain number of violations
                 else:
-                    self.custom(m, sender)
+                    self.custom(msg, sender)
                     thread = threading.Thread(target=self.respond, args=(c, sender, self.messages[sender]))
                     thread.start()
                     thread.join(timeout=30)
@@ -331,12 +356,18 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
             #list models
             if message == ".model":
                 c.privmsg(self.channel, f"Current model: {self.model}")
-                c.privmsg(self.channel, "Available models: " + ", ".join(self.models))
+                c.privmsg(self.channel, "Available models:")
+                for line in self.chop(", ".join(self.models)):
+                    c.privmsg(self.channel, line)
+                    time.sleep(.5)
             #change model if admin
             if message.startswith(".model ") and sender == self.admin:
                 model = message.split(" ", 1)[1]
                 if model in self.models:
                     self.change_model(model)
+                    c.privmsg(self.channel, f"Model set to {self.model}")
+                elif model == "reset":
+                    self.change_model(self.default_model)
                     c.privmsg(self.channel, f"Model set to {self.model}")
                 else:
                     c.privmsg(self.channel, "Try again")
@@ -348,7 +379,8 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
                     f".ai <message> or {self.nickname}: <message> to talk to me.", ".x <user> <message> to talk to another user's history for collaboration.",
                     ".persona <personality> to change my personality. I can be any personality type, character, inanimate object, place, concept.", 
                     ".custom <prompt> to use a custom prompt instead of a persona",
-                    ".stock to set to stock GPT settings.", f".reset to reset to my default personality, {self.personality}.",  
+                    ".stock to set to stock GPT settings.", f".reset to reset to my default personality, {self.personality}.", 
+                    ".model to list available models", ".model <modelname> to change model", ".model reset to reset model",
                     "Available at https://github.com/h1ddenpr0cess20/infinigpt-irc"
 
                 ]

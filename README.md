@@ -3,16 +3,20 @@ InfiniGPT is an OpenAI chatbot for IRC (Internet Relay Chat).  It has a great pr
 
 Also available for the Matrix chat protocol at [infinigpt-matrix](https://github.com/h1ddenpr0cess20/infinigpt-matrix/)
 
-Also available for use with offline LLMs at [ollamarama-irc](https://github.com/h1ddenpr0cess20/ollamarama-irc)
+Now with Ollama support and model switching.
+
 ## Setup
 
 ```
-pip3 install openai irc
+pip3 install openai irc ollama-python
 ```
 Get an [OpenAI API](https://platform.openai.com/signup) key 
 
+Add desired Ollama models to the models list, if using.
+
 Fill in the variables for channel, nickname, password and server in launcher.py.  
 Password is optional, but registration is required for some channels.
+
 
 ## Use
 ```
@@ -38,6 +42,15 @@ python3 launcher.py
     
 **.stock**
     Remove personality and reset to standard GPT settings
+
+**.model**
+    List available large language models
+
+**.model _modelname_**
+    Change model
+
+**.model reset**
+    Reset model
 
 **.help _botname_**
     Display the help menu
