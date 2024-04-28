@@ -8,19 +8,22 @@ Now with Ollama support and model switching.
 ## Setup
 
 ```
-pip3 install openai irc ollama-python
+pip3 install openai irc 
+
+#optionally
+pip3 install ollama-python
 ```
-Get an [OpenAI API](https://platform.openai.com/signup) key 
+Get an [OpenAI API](https://platform.openai.com/signup) key, set it as an environment variable OPENAI_API_KEY (you can do this at the bottom of the code as well by uncommenting the part to set the environment variable)
 
-Add desired Ollama models to the models list, if using.
+Add desired Ollama models to the models list in config.json if you want to use them.
 
-Fill in the variables for channel, nickname, password and server in launcher.py.  
+Fill in the variables for channel, nickname, password and server in config.json.  
 Password is optional, but registration is required for some channels.
 
 
 ## Use
 ```
-python3 launcher.py
+python3 infinigpt.py
 ```
 **.ai _message_ or botname: _message_**
     Basic usage.
@@ -35,7 +38,7 @@ python3 launcher.py
     Don't use a custom prompt here.
 
 **.custom _prompt_**
-    Set a custom prompt such as one from [awesome-chatgpt-prompts](https://github.com/f/awesome-chatgpt-prompts)
+    Set a custom system prompt
         
 **.reset**
     Reset to preset personality
