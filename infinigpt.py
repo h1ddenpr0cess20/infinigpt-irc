@@ -12,39 +12,26 @@ import time
 import textwrap
 import threading
 import os
+import json
 #import ollama
 
 class infiniGPT(irc.bot.SingleServerIRCBot):
-    def __init__(self, admin, api_key, personality, channel, nickname, server, password=None, port=6667):
-        irc.bot.SingleServerIRCBot.__init__(self, [(server, port)], nickname, nickname)
+    def __init__(self, api_key, port=6667):
+        with open("config.json", "r") as f:
+            config = json.load(f)
+            f.close()
+
+        self.personality, self.channel, self.nickname, self.password, self.server, self.admin = config[1].values()
+        irc.bot.SingleServerIRCBot.__init__(self, [(self.server, port)], self.nickname, self.nickname)
         self.openai = OpenAI(api_key=api_key)
         
-        self.personality = personality
-        self.channel = channel
-        self.server = server
-        self.nickname = nickname
-        self.password = password
-        self.admin = admin
-
-        self.messages = {} #Holds chat history
-        self.users = [] #List of users in the channel
+        #chat history
+        self.messages = {}
+        #user list
+        self.users = [] 
 
         #add your desired ollama models and gpt models here
-        self.models = [
-            'gpt-3.5-turbo',
-            'gpt-4-turbo-preview',
-            'codellama',
-            'dolphin-mistral',
-            'gemma',
-            'llama2',
-            'mistral',
-            'openchat',
-            'orca2',
-            'solar',
-            'stablelm2',
-            'starling-lm',
-            'zephyr'
-            ]
+        self.models = config[0]['models']
 
         #alternatively create list automatically from all installed models using ollama-python
         # def model_list():
@@ -59,7 +46,7 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
         # self.models = model_list()
 
         #set model 
-        #change to the name of an Ollama model if using Ollama, for example "zephyr"
+        #change to the name of an Ollama model if using Ollama, for example "llama3"
         self.default_model = "gpt-3.5-turbo"
         self.change_model(self.default_model) 
 
@@ -67,9 +54,10 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
         # prompt parts (this prompt was engineered by me and works almost always)
         self.prompt = ("assume the personality of ", ".  roleplay as them and never break character unless asked.  keep your responses relatively short.")
     
+    #chop up response for irc length limit
     def chop(self, message):
         lines = message.splitlines()
-        newlines = []  # Initialize an empty list to store wrapped lines
+        newlines = []  
 
         for line in lines:
             if len(line) > 420:
@@ -80,12 +68,12 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
                     replace_whitespace=False,
                     fix_sentence_endings=True,
                     break_long_words=False)
-                newlines.extend(wrapped_lines)  # Extend the list with wrapped lines
+                newlines.extend(wrapped_lines) 
             else:
-                newlines.append(line)  # Add the original line to the list
-
-        return newlines  # Return the list of wrapped lines
+                newlines.append(line) 
+        return newlines  
     
+    #change between different LLMs
     def change_model(self, modelname):
         if modelname.startswith("gpt"):
             self.openai.base_url = 'https://api.openai.com/v1'
@@ -108,7 +96,7 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
         personality = self.prompt[0] + persona + self.prompt[1]
         self.add_history("system", sender, personality)
 
-    #set a custom prompt (such as one from awesome-chatgpt-prompts)
+    #set a custom prompt
     def custom(self, prompt, sender):
         #clear existing history
         if sender in self.messages:
@@ -137,9 +125,8 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
             response_text = response.choices[0].message.content
             
             #removes any unwanted quotation marks from responses
-            # if response_text.startswith('"') and response_text.endswith('"'):
-            #     response_text = response_text.strip('"')  
-            #doesn't work.  figure out later
+            if response_text.startswith('"') and response_text.endswith('"'):
+                response_text = response_text.strip('"')  
 
             #add the response text to the history before breaking it up
             self.add_history("assistant", sender, response_text)
@@ -179,18 +166,18 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
             except:
                 pass
         return flagged
-              
+
     #when bot joins network, identify and wait, then join channel   
     def on_welcome(self, c, e):
         #if nick has a password
         if self.password != None:
-          c.privmsg("NickServ", f"IDENTIFY {self.password}")
-          #wait for identify to finish
-          time.sleep(5)
+            c.privmsg("NickServ", f"IDENTIFY {self.password}")
+            #wait for identify to finish
+            time.sleep(5)
         
         #join channel
         c.join(self.channel)
-              
+
         # get users in channel
         c.send_raw("NAMES " + self.channel)
 
@@ -374,18 +361,10 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
 
             #help menu    
             if message.startswith(f".help {self.nickname}"):
-                help = [
-                    "I am an OpenAI chatbot.  I can have any personality you want me to have.  Each user has their own chat history and personality setting.",
-                    f".ai <message> or {self.nickname}: <message> to talk to me.", ".x <user> <message> to talk to another user's history for collaboration.",
-                    ".persona <personality> to change my personality. I can be any personality type, character, inanimate object, place, concept.", 
-                    ".custom <prompt> to use a custom prompt instead of a persona",
-                    ".stock to set to stock GPT settings.", f".reset to reset to my default personality, {self.personality}.", 
-                    ".model to list available models", ".model <modelname> to change model", ".model reset to reset model",
-                    "Available at https://github.com/h1ddenpr0cess20/infinigpt-irc"
-
-                ]
-                for line in help:
-                    c.notice(sender, line)
+                with open("help.txt", "r") as f:
+                    help_text = f.readlines()
+                for line in help_text:
+                    c.notice(sender, line.strip())
                     time.sleep(1)
                 
 if __name__ == "__main__":
@@ -394,20 +373,6 @@ if __name__ == "__main__":
 
     api_key = os.environ.get("OPENAI_API_KEY")
 
-    # create the bot and connect to the server
-    personality = "an AI that can assume any personality, named InfiniGPT"  #you can put anything here.  A character, person, personality type, object, concept, emoji, etc
-    channel = "#CHANNEL"
-    nickname = "NICKNAME"
-    #password = "PASSWORD"
-    server = "SERVER"
-    #bot owner
-    admin = 'botowner'
-    
-    #checks if password variable exists (comment it out if unregistered)
-    try:
-      infiniGPT = infiniGPT(admin, api_key, personality, channel, nickname, server, password)
-    except:
-      infiniGPT = infiniGPT(admin, api_key, personality, channel, nickname, server)
-      
+    infiniGPT = infiniGPT(api_key)
     infiniGPT.start()
 

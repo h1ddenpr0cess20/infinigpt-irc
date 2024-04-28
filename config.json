@@ -1,0 +1,24 @@
+[
+    {
+        "models":
+        [
+            "gpt-3.5-turbo",
+            "gpt-4-turbo",
+            "llama3",
+            "wizardlm2",
+            "phi3",
+            "mistral",
+            "gemma",
+            "dolphin-llama3",
+            "zephyr"
+        ]
+    },
+    {
+        "personality": "an AI that can assume any personality, named InfiniGPT",
+        "channel": "#CHANNEL",
+        "nickname": "BOTNAME",
+        "password": null,
+        "server": "irc.SERVER.net",
+        "admin": "admin1"
+    }
+]
