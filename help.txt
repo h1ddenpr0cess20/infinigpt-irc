@@ -3,8 +3,8 @@ I am an AI chatbot.  I can have any personality you want me to have.  Each user 
 .x <user> <message> to talk to another user's history for collaboration
 .persona <personality> to change my personality. I can be any personality type, character, inanimate object, place, concept.
 .custom <prompt> to use a custom system prompt instead of a persona
-.stock to set to stock settings.", f".reset to reset to my default personality, {self.personality}.
+.stock to set to stock settings., 
+.reset to reset to my default personality.
 .model to list available models
 .model <modelname> to change model
-.model reset to reset model
 Available at https://github.com/h1ddenpr0cess20/infinigpt-irc

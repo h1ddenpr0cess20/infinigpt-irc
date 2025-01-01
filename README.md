@@ -48,8 +48,5 @@ python3 infinigpt.py
 **.model _modelname_**
     Change model
 
-**.model reset**
-    Reset model
-
 **.help _botname_**
     Display the help menu
