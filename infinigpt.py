@@ -13,47 +13,26 @@ import textwrap
 import threading
 import os
 import json
-#import ollama
 
 class infiniGPT(irc.bot.SingleServerIRCBot):
-    def __init__(self, api_key, port=6667):
+    def __init__(self, port=6667):
         with open("config.json", "r") as f:
-            config = json.load(f)
+            self.config = json.load(f)
             f.close()
 
-        self.personality, self.channel, self.nickname, self.password, self.server, self.admin = config[1].values()
+        self.server, self.nickname, self.password, self.channel, self.admin = self.config["irc"].values()
+        self.models, self.api_keys, self.default_model, self.default_personality, self.prompt, self.options = self.config["llm"].values()
+        self.openai_key, self.xai_key = self.api_keys.values()
+        self.personality = self.default_personality
+
         irc.bot.SingleServerIRCBot.__init__(self, [(self.server, port)], self.nickname, self.nickname)
-        self.openai = OpenAI(api_key=api_key)
+        self.openai = OpenAI()
         
-        #chat history
         self.messages = {}
-        #user list
         self.users = [] 
 
-        #add your desired ollama models and gpt models here
-        self.models = config[0]['models']
-
-        #alternatively create list automatically from all installed models using ollama-python
-        # def model_list():
-        #     models = ollama.list()
-
-        #     model_list = sorted([model['name'].removesuffix(":latest") for model in models['models']])
-        #     model_list.insert(0,"gpt-3.5-turbo")
-        #     model_list.insert(1,"gpt-4-turbo-preview")
-
-        #     return model_list
-
-        # self.models = model_list()
-
-        #set model 
-        #change to the name of an Ollama model if using Ollama, for example "llama3"
-        self.default_model = "gpt-3.5-turbo"
         self.change_model(self.default_model) 
 
-
-        # prompt parts (this prompt was engineered by me and works almost always)
-        self.prompt = ("assume the personality of ", ".  roleplay as them and never break character unless asked.  keep your responses relatively short.")
-    
     #chop up response for irc length limit
     def chop(self, message):
         lines = message.splitlines()
@@ -74,34 +53,39 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
         return newlines  
     
     #change between different LLMs
-    def change_model(self, modelname):
-        if modelname.startswith("gpt"):
-            self.openai.base_url = 'https://api.openai.com/v1'
-        else:
-            self.openai.base_url = 'http://localhost:11434/v1'
+    def change_model(self, model):
+        if model in self.models:
+            if model.startswith("gpt"):
+                self.openai.base_url = 'https://api.openai.com/v1'
+                self.openai.api_key = self.openai_key
+            elif model.startswith("grok"):
+                self.openai.base_url = 'https://api.x.ai/v1/'
+                self.openai.api_key = self.xai_key
+            else:
+                self.openai.base_url = 'http://localhost:11434/v1'
 
-        self.model = self.models[self.models.index(modelname)]
+        self.model = self.models[self.models.index(model)]
     
     #resets bot to preset personality per user    
     def reset(self, sender):
         if sender in self.messages:
             self.messages[sender].clear()
-            self.persona(self.personality, sender)
+            self.persona(self.default_personality, sender)
 
-    #sets the bot personality 
-    def persona(self, persona, sender):
-        #clear existing history
+    def set_prompt(self, c, sender, persona=None, custom=None, respond=True):
         if sender in self.messages:
             self.messages[sender].clear()
-        personality = self.prompt[0] + persona + self.prompt[1]
-        self.add_history("system", sender, personality)
-
-    #set a custom prompt
-    def custom(self, prompt, sender):
-        #clear existing history
-        if sender in self.messages:
-            self.messages[sender].clear()
+        if persona != None and persona != "":
+            prompt = self.prompt[0] + persona + self.prompt[1]
+        if custom != None  and custom != "":
+            prompt = custom
         self.add_history("system", sender, prompt)
+        if respond:
+            self.add_history("user", sender, "introduce yourself")
+            thread = threading.Thread(target=self.respond, args=(c, sender, self.messages[sender]))
+            thread.start()
+            thread.join(timeout=30)
+            time.sleep(2)
 
     #adds messages to self.messages    
     def add_history(self, role, sender, message):
@@ -125,7 +109,7 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
             response_text = response.choices[0].message.content
             
             #removes any unwanted quotation marks from responses
-            if response_text.startswith('"') and response_text.endswith('"'):
+            if response_text.startswith('"') and response_text.endswith('"') and response_text.count('"') == 2:
                 response_text = response_text.strip('"')  
 
             #add the response text to the history before breaking it up
@@ -154,14 +138,11 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
         if len(self.messages[sender]) > 20:
             del self.messages[sender][1:3]
         
-    #run message through moderation endpoint for ToS check        
     def moderate(self, message):
-        #defaults to false, will return false every time when using ollama
-        #if you want to moderate everything, rewrite this to set the base url to openai
         flagged = False 
         if not flagged:
             try:
-                moderate = self.openai.moderations.create(input=message,) #run through the moderation endpoint
+                moderate = self.openai.moderations.create(input=message,) 
                 flagged = moderate.results[0].flagged #true or false
             except:
                 pass
@@ -305,12 +286,7 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
                     c.privmsg(self.channel, f"{sender}: This persona violates OpenAI terms of use and was not set.")
                     #add way to ignore user after a certain number of violations
                 else:
-                    self.persona(msg, sender)
-                    thread = threading.Thread(target=self.respond, args=(c, sender, self.messages[sender]))
-                    thread.start()
-                    thread.join(timeout=30)
-                    time.sleep(2)
-
+                    self.set_prompt(c, sender, persona=msg)
             #use custom prompts 
             if message.startswith(".custom "):
                 msg = message.split(" ", 1)
@@ -321,11 +297,7 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
                     c.privmsg(self.channel, f"{sender}: This custom prompt violates OpenAI terms of use and was not set.")
                     #add way to ignore user after a certain number of violations
                 else:
-                    self.custom(msg, sender)
-                    thread = threading.Thread(target=self.respond, args=(c, sender, self.messages[sender]))
-                    thread.start()
-                    thread.join(timeout=30)
-                    time.sleep(2)
+                    self.set_prompt(c, sender, custom=msg)
                     
             #reset to default personality    
             if message.startswith(".reset"):
@@ -368,11 +340,6 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
                     time.sleep(1)
                 
 if __name__ == "__main__":
-    #put a key here and uncomment if not already set in environment
-    #os.environ['OPENAI_API_KEY'] = "api_key"
-
-    api_key = os.environ.get("OPENAI_API_KEY")
-
-    infiniGPT = infiniGPT(api_key)
+    infiniGPT = infiniGPT()
     infiniGPT.start()
 
