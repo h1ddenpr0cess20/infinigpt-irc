@@ -22,7 +22,7 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
 
         self.server, self.nickname, self.password, self.channel, self.admin = self.config["irc"].values()
         self.models, self.api_keys, self.default_model, self.default_personality, self.prompt, self.options = self.config["llm"].values()
-        self.openai_key, self.xai_key = self.api_keys.values()
+        self.openai_key, self.xai_key, self.google_key = self.api_keys.values()
         self.personality = self.default_personality
 
         irc.bot.SingleServerIRCBot.__init__(self, [(self.server, port)], self.nickname, self.nickname)
@@ -55,11 +55,20 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
                     if model.startswith("gpt"):
                         self.openai.base_url = 'https://api.openai.com/v1'
                         self.openai.api_key = self.openai_key
+                        self.params = self.options
                     elif model.startswith("grok"):
                         self.openai.base_url = 'https://api.x.ai/v1/'
                         self.openai.api_key = self.xai_key
+                        self.params = self.options
+                    elif model.startswith("gemini"):
+                        self.openai.base_url = 'https://generativelanguage.googleapis.com/v1beta/openai/'
+                        self.openai.api_key = self.google_key
+                        self.params = self.options
+                        if 'frequency_penalty' in self.params:
+                            del self.params['frequency_penalty'] #unsupported with gemini
                     else:
                         self.openai.base_url = 'http://localhost:11434/v1'
+                        self.params = self.options
 
                     self.model = self.models[self.models.index(model)]
                     if channel:
@@ -243,7 +252,7 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
             ".custom": lambda: self.set_prompt(c, sender, custom=' '.join(message[1:])),
             ".reset": lambda: self.reset(c, sender),
             ".stock": lambda: self.reset(c, sender, stock=True),
-            f".help": lambda: self.help_menu(c, sender),
+            ".help": lambda: self.help_menu(c, sender)
         }
         admin_commands = {
             ".model": lambda: self.change_model(c, channel=True, model=message[1] if len(message) > 1 else False)
