@@ -63,9 +63,7 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
                     elif model.startswith("gemini"):
                         self.openai.base_url = 'https://generativelanguage.googleapis.com/v1beta/openai/'
                         self.openai.api_key = self.google_key
-                        self.params = self.options
-                        if 'frequency_penalty' in self.params:
-                            del self.params['frequency_penalty'] #unsupported with gemini
+                        self.params = {key: value for key, value in self.options.items() if key != 'frequency_penalty'} #unsupported with gemini
                     else:
                         self.openai.base_url = 'http://localhost:11434/v1'
                         self.params = self.options
@@ -127,7 +125,8 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
         try:
             response = self.openai.chat.completions.create(
                 model=self.model, 
-                messages=message)
+                messages=message,
+                **self.params)
             
             response_text = response.choices[0].message.content
             
