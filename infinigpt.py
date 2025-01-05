@@ -1,6 +1,6 @@
 '''
 InfiniGPT-IRC
-    An AI chatbot for internet relay chat with infinite personalities
+    An AI chatbot for IRC with infinite personalities
     Supports OpenAI, xAI, and Ollama models
 
     written by Dustin Whyte
@@ -15,7 +15,34 @@ import threading
 import json
 
 class infiniGPT(irc.bot.SingleServerIRCBot):
+    """
+    An IRC bot that integrates with the OpenAI API, allowing interaction 
+    with customizable personalities and models.
+    Supports OpenAI, xAI, Google, and Ollama models.
+
+    Attributes:
+        config_file (str): Path to the configuration file.
+        server (str): The IRC server address.
+        nickname (str): The bot's nickname.
+        password (str): Password for NickServ identification.
+        channel (str): The IRC channel the bot will join.
+        admin (str): Admin username.
+        models (list): Available models for the chatbot.
+        api_keys (dict): API keys for OpenAI, xAI, and Google.
+        default_model (str): Default model to use.
+        default_personality (str): Default personality for the chatbot.
+        prompt (list): Default system prompt structure.
+        options (dict): Options for the API requests.
+        personality (str): Current personality in use.
+        messages (dict): History of conversations per user.
+    """
     def __init__(self, port=6667):
+        """
+        Initialize the bot with configuration and setup.
+
+        Args:
+            port (int): Port to connect to the IRC server. Defaults to 6667.
+        """
         with open("config.json", "r") as f:
             self.config = json.load(f)
             f.close()
@@ -31,6 +58,15 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
         self.messages = {}
 
     def chop(self, message):
+        """
+        Break a message into lines of at most 420 characters, preserving whitespace.
+
+        Args:
+            message (str): The message to be chopped.
+
+        Returns:
+            list: A list of strings, each within the 420-character limit.
+        """
         lines = message.splitlines()
         newlines = []  
 
@@ -49,6 +85,14 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
         return newlines  
     
     def change_model(self, c, channel=False, model=False):
+        """
+        Change the chatbot model or list available models.
+
+        Args:
+            c: IRC connection object.
+            channel (bool): Whether to send messages to the channel. Defaults to False.
+            model (str): The model to switch to. Defaults to False.
+        """
         if model:
             try:
                 if model in self.models:
@@ -80,6 +124,14 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
                     c.privmsg(self.channel, line)
                 
     def reset(self, c, sender, stock=False):
+        """
+        Reset the chat history for a user and optionally apply default settings.
+
+        Args:
+            c: IRC connection object.
+            sender (str): The user initiating the reset.
+            stock (bool): Whether to apply stock settings. Defaults to False.
+        """
         if sender in self.messages:
             self.messages[sender].clear()
         else:
@@ -91,6 +143,16 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
             c.privmsg(self.channel, f"Stock settings applied for {sender}")
 
     def set_prompt(self, c, sender, persona=None, custom=None, respond=True):
+        """
+        Set a custom or personality-based prompt for a user.
+
+        Args:
+            c: IRC connection object.
+            sender (str): The user for whom the prompt is being set.
+            persona (str): Predefined personality. Defaults to None.
+            custom (str): Custom prompt. Defaults to None.
+            respond (bool): Whether to initiate a response. Defaults to True.
+        """
         if sender in self.messages:
             self.messages[sender].clear()
         if persona != None and persona != "":
@@ -106,6 +168,14 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
             time.sleep(2)
 
     def add_history(self, role, sender, message):
+        """
+        Append a message to the user's conversation history.
+
+        Args:
+            role (str): The role of the message sender (e.g., 'user', 'assistant', 'system').
+            sender (str): The user for whom the message is being added.
+            message (str): The message content.
+        """
         if sender in self.messages:
             self.messages[sender].append({"role": role, "content": message})
         else:
@@ -122,6 +192,15 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
                 del self.messages[sender][0:2]
 
     def respond(self, c, sender, message, sender2=None):
+        """
+        Generate and send a response to a user.
+
+        Args:
+            c: IRC connection object.
+            sender (str): The user to respond to.
+            message (list): The conversation history.
+            sender2 (str): Recipient for the response if the .x function was used.  Defaults to None.
+        """
         try:
             response = self.openai.chat.completions.create(
                 model=self.model, 
@@ -151,6 +230,12 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
             print(x)
         
     def moderate(self, message):
+        """
+        Check if message violates OpenAI terms of service if OpenAI used.
+
+        Args:
+            message (str): The message content.
+        """
         flagged = False 
         if not flagged:
             try:
@@ -161,6 +246,13 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
         return flagged
 
     def on_welcome(self, c, e):
+        """
+        Handle the welcome event and join the configured channel.
+
+        Args:
+            c: IRC connection object.
+            e: Event object.
+        """
         self.change_model(c, model=self.default_model)
         if self.password != None:
             c.privmsg("NickServ", f"IDENTIFY {self.password}")
@@ -182,12 +274,24 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
             pass
             
     def on_nicknameinuse(self, c, e):
+        """
+        Handle the nickname-in-use event by appending an underscore to the nickname.
+
+        Args:
+            c: IRC connection object.
+            e: Event object.
+        """
         c.nick(c.get_nickname() + "_")
 
     def on_join(self, c, e):
-        user = e.source
-        user = user.split("!")
-        user = user[0]
+        """
+        Handle the join event to extract and optionally use the username to generate a greeting.
+
+        Args:
+            c: IRC connection object.
+            e: Event object.
+        """
+        user = e.source.split("!")[0]
 
     # # Optional greeting for when a user joins        
     #     greet = f"come up with a unique greeting for the user {user}"
@@ -210,6 +314,16 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
     #             pass
             
     def ai(self, c, e, sender, message, x=False):
+        """
+        Process AI-related commands for generating responses.
+
+        Args:
+            c: IRC connection object.
+            e: Event object.
+            sender (str): The user initiating the command.
+            message (list): The command and arguments.
+            x (bool): Whether to address the command to another user. Defaults to False.
+        """
         if x and message[2]:
             name = message[1]
             message = ' '.join(message[2:])
@@ -236,6 +350,13 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
         time.sleep(2)
 
     def help_menu(self, c, sender):
+        """
+        Display the help menu by sending lines to the user.
+
+        Args:
+            c: IRC connection object.
+            sender (str): The user requesting help.
+        """
         with open("help.txt", "r") as f:
             help_text = f.readlines()
         for line in help_text:
@@ -243,6 +364,15 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
             time.sleep(1)
 
     def handle_message(self, c, e, sender, message):
+        """
+        Handle user and admin commands by executing the corresponding actions.
+
+        Args:
+            c: IRC connection object.
+            e: Event object.
+            sender (str): The user issuing the command.
+            message (list): The command and its arguments.
+        """
         user_commands = {
             ".ai": lambda: self.ai(c, e, sender, message),
             f"{self.nickname}:": lambda: self.ai(c, e, sender, message),
@@ -266,10 +396,17 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
             action()
 
     def on_pubmsg(self, c, e):
+        """
+        Handles public messages sent in the channel.
+        Parses the message to identify commands or content directed at the bot
+        and delegates to the appropriate handler.
+
+        Args:
+            c: IRC connection object.
+            e: Event object.
+        """
         message = e.arguments[0].split(" ")
-        sender = e.source
-        sender = sender.split("!")
-        sender = sender[0]
+        sender = e.source.split("!")[0]
 
         if sender != self.nickname:
             self.handle_message(c, e, sender, message)
