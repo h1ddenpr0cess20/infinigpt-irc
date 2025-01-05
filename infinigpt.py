@@ -33,7 +33,11 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
         default_personality (str): Default personality for the chatbot.
         prompt (list): Default system prompt structure.
         options (dict): Options for the API requests.
+        openai_key (str): OpenAI API key.
+        xai_key (str): xAI API key.
+        google_key (str): Google API key.
         personality (str): Current personality in use.
+        openai: OpenAI client instance.
         messages (dict): History of conversations per user.
     """
     def __init__(self, port=6667):
@@ -65,7 +69,7 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
             message (str): The message to be chopped.
 
         Returns:
-            list: A list of strings, each within the 420-character limit.
+            newlines (list): A list of strings, each within the 420-character limit.
         """
         lines = message.splitlines()
         newlines = []  
@@ -86,7 +90,7 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
     
     def change_model(self, c, channel=False, model=False):
         """
-        Change the chatbot model or list available models.
+        Change the large language model or list available models.
 
         Args:
             c: IRC connection object.
@@ -235,6 +239,9 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
 
         Args:
             message (str): The message content.
+
+        Returns:
+            flagged (bool): Whether or not the message violates OpenAI terms of service.
         """
         flagged = False 
         if not flagged:
@@ -251,7 +258,7 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
 
         Args:
             c: IRC connection object.
-            e: Event object.
+            e: IRC event object.
         """
         self.change_model(c, model=self.default_model)
         if self.password != None:
@@ -279,7 +286,7 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
 
         Args:
             c: IRC connection object.
-            e: Event object.
+            e: IRC event object.
         """
         c.nick(c.get_nickname() + "_")
 
@@ -289,7 +296,7 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
 
         Args:
             c: IRC connection object.
-            e: Event object.
+            e: IRC event object.
         """
         user = e.source.split("!")[0]
 
@@ -319,7 +326,7 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
 
         Args:
             c: IRC connection object.
-            e: Event object.
+            e: IRC event object.
             sender (str): The user initiating the command.
             message (list): The command and arguments.
             x (bool): Whether to address the command to another user. Defaults to False.
@@ -369,7 +376,7 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
 
         Args:
             c: IRC connection object.
-            e: Event object.
+            e: IRC event object.
             sender (str): The user issuing the command.
             message (list): The command and its arguments.
         """
@@ -403,7 +410,7 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
 
         Args:
             c: IRC connection object.
-            e: Event object.
+            e: IRC event object.
         """
         message = e.arguments[0].split(" ")
         sender = e.source.split("!")[0]
