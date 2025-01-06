@@ -57,7 +57,7 @@ class infiniGPT(irc.bot.SingleServerIRCBot):
         self.personality = self.default_personality
 
         irc.bot.SingleServerIRCBot.__init__(self, [(self.server, port)], self.nickname, self.nickname)
-        self.openai = OpenAI()
+        self.openai = OpenAI(api_key=self.openai_key)
         
         self.messages = {}
 
