@@ -38,9 +38,9 @@
     },
     "irc": {
         "server": "irc.rizon.net",
-        "nickname": "InfiniGPT2",
+        "nickname": "InfiniGPT",
         "password": null,
-        "channels": ["#bottest", "#robots"],
-        "admin": "vagabond"
+        "channels": ["#channel1", "#channel2"],
+        "admin": "adminnick"
     }
 }
