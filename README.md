@@ -22,8 +22,7 @@ Password is optional, but registration is required for some channels.
 python3 infinigpt.py
 ```  
 **.ai** _message_ or **botname:** _message_  
-    Basic usage.
-    Personality is preset by bot operator.
+    Basic usage.  You can also privately message the bot without using these commands.
     
 **.x** _user_ _message_  
     This allows you to talk to another user's chat history.  
@@ -31,7 +30,7 @@ python3 infinigpt.py
      
 **.persona** _personality_  
     Changes the personality.  It can be a character, personality type, object, idea.  
-    Don't use a custom prompt here.
+    Don't use a custom system prompt here.
 
 **.custom** _prompt_  
     Set a custom system prompt
