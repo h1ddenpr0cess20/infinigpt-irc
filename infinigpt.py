@@ -8,7 +8,7 @@ from irc.bot import SingleServerIRCBot
 
 class InfiniGPT(SingleServerIRCBot):
     """
-    An asynchronous IRC bot integrated with multiple LLM APIs for real-time interaction.
+    An asynchronous IRC bot integrated with multiple LLM APIs.
 
     Features:
     - Supports OpenAI, xAI, Google, and Ollama models for generating responses.
@@ -166,8 +166,8 @@ class InfiniGPT(SingleServerIRCBot):
                 asyncio.run_coroutine_threadsafe(asyncio.sleep(1.5), self.loop)
     
     def on_join(self, connection, event):
-       """Actions to take when a user joins.  Currently not implemented."""
-       pass
+        """Actions to take when a user joins.  Currently not implemented."""
+        pass
 
     def on_nicknameinuse(self, connection, event):
         """
@@ -271,7 +271,7 @@ class InfiniGPT(SingleServerIRCBot):
             if target in self.messages[channel]:
                 await self.add_history("user", channel, target, message)
                 name, lines = await self.respond(target, self.messages[channel][target], sender2=sender)
-                await self.add_history("assistant", channel, name, ''.join(lines))
+                await self.add_history("assistant", channel, target, ''.join(lines))
             else:
                 pass
         else:
