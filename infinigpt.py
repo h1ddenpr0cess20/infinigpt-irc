@@ -31,7 +31,7 @@ class InfiniGPT(SingleServerIRCBot):
         default_model (str): Default model for generating responses.
         default_personality (str): Default personality for the bot.
         prompt (list): System prompt template for LLM interactions.
-        options (dict): Miscellaneous options from configuration.
+        options (dict): Additional options for API calls (currently not implemented).
         messages (dict): Tracks conversation history per channel and user.
     """
     def __init__(self, port=6667):
@@ -150,31 +150,24 @@ class InfiniGPT(SingleServerIRCBot):
         self.change_model(connection, model=self.default_model)
         system_prompt = self.prompt[0] + self.default_personality + self.prompt[1]
         logger.info(f"System prompt set to {system_prompt}")
-        for channel in self._channels:
-            logger.info(f"Joining channel: {channel}")
-            connection.join(channel)
-    
-    def on_join(self, connection, event):
-        """
-        Handle the bot joining a channel and introduce itself.
-
-        Args:
-            connection (IRCConnection): IRC connection instance.
-            event (IRCEvent): Event details from the server.
-        """
-        channel = event.target
-        system_prompt = self.prompt[0] + self.default_personality + self.prompt[1]
-
         future = asyncio.run_coroutine_threadsafe(
             self.respond(sender=None, messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": "introduce yourself"}]),
             self.loop
         )
         name, lines = future.result()
         lines.append("Type .help to learn how to use me.")
-        logger.info(f"Sending response to {channel}: {' '.join(lines)}")
-        for line in lines:
-            connection.privmsg(channel, line)
-            asyncio.run_coroutine_threadsafe(asyncio.sleep(1.5), self.loop)
+        for channel in self._channels:
+            logger.info(f"Joining channel: {channel}")
+            connection.join(channel)
+            
+            logger.info(f"Sending response to {channel}: {' '.join(lines)}")
+            for line in lines:
+                connection.privmsg(channel, line)
+                asyncio.run_coroutine_threadsafe(asyncio.sleep(1.5), self.loop)
+    
+    def on_join(self, connection, event):
+       """Actions to take when a user joins.  Currently not implemented."""
+       pass
 
     def on_nicknameinuse(self, connection, event):
         """
@@ -185,6 +178,14 @@ class InfiniGPT(SingleServerIRCBot):
             event (IRCEvent): Event details from the server.
         """
         connection.nick(connection.get_nickname() + "_")
+
+    def on_privmsg(self, connection, event):
+        """
+        Will allow users to privately message the bot, without having to use .ai command
+        Whenever I get around to doing it.
+        
+        """
+        pass
 
     def on_pubmsg(self, connection, event):
         """
