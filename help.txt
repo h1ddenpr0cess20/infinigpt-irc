@@ -7,4 +7,5 @@ I am an AI chatbot.  I can have any personality you want me to have.  Each user 
 .reset to reset to my default personality.
 .model to list available models.
 .model <modelname> to change model.
+.join <channel> to join a channel.
 Available at https://github.com/h1ddenpr0cess20/infinigpt-irc

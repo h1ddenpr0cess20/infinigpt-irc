@@ -44,8 +44,11 @@ python3 infinigpt.py
 **.model**  
     List available large language models
 
-**.model _modelname_**  
+**.model** _modelname_  
     Change model
 
-**.help**  
+**.join** _channel_   
+    List available large language models
+
+**.help** _botname_  
     Display the help menu
