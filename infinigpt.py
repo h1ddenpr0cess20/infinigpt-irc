@@ -66,30 +66,22 @@ class InfiniGPT(SingleServerIRCBot):
             tuple: The name for response attribution and a list of response lines.
         """
         if self.model in self.models["openai"]:
-            headers = {
-                "Authorization": f"Bearer {self.openai_key}",
-                "Content-Type": "application/json"
-            }
+            bearer = self.openai_key
             self.url = "https://api.openai.com/v1"
         elif self.model in self.models["xai"]:
-            headers = {
-                "Authorization": f"Bearer {self.xai_key}",
-                "Content-Type": "application/json"
-            }
+            bearer = self.xai_key
             self.url = "https://api.x.ai/v1"
         elif self.model in self.models["google"]:
-            headers = {
-                "Authorization": f"Bearer {self.google_key}",
-                "Content-Type": "application/json"
-            }
+            bearer = self.google_key
             self.url = "https://generativelanguage.googleapis.com/v1beta/openai"
         elif self.model in self.models["ollama"]:
-            headers = {
-                "Authorization": f"Bearer hello_friend",
-                "Content-Type": "application/json"
-            }
+            bearer = "hello_friend"
             self.url = "http://localhost:11434/v1"
 
+        headers = {
+                "Authorization": f"Bearer {bearer}",
+                "Content-Type": "application/json"
+        }
         data = {
             "model": self.model,
             "messages": messages
