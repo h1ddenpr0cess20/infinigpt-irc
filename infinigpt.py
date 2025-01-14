@@ -45,7 +45,7 @@ class InfiniGPT(SingleServerIRCBot):
             self.config = json.load(f)
             f.close()
 
-        self.server, self.nickname, self.password, self._channels, self.admin = self.config["irc"].values()
+        self.server, self.nickname, self.password, self._channels, self.admins = self.config["irc"].values()
         self.models, self.api_keys, self.default_model, self.default_personality, self.prompt, self.options = self.config["llm"].values()
         self.openai_key, self.xai_key, self.google_key = self.api_keys.values()
         self.personality = self.default_personality
@@ -79,8 +79,8 @@ class InfiniGPT(SingleServerIRCBot):
             self.url = "http://localhost:11434/v1"
 
         headers = {
-                "Authorization": f"Bearer {bearer}",
-                "Content-Type": "application/json"
+            "Authorization": f"Bearer {bearer}",
+            "Content-Type": "application/json"
         }
         data = {
             "model": self.model,
@@ -125,6 +125,29 @@ class InfiniGPT(SingleServerIRCBot):
                 ]
                 for line in current_model:
                     connection.privmsg(channel if channel != "privmsg" else sender, line)
+                    
+    async def join_channels(self, connection, channels):
+        """
+        Join a list of channels, or do nothing if none were provided.
+
+        Args:
+            connection (IRCConnection): IRC connection instance.
+            channels (list): The channels to join
+        """
+        if channels == None:
+            return None
+        channels = [channel for channel in channels if channel.startswith("#")]
+        if channels != []:
+            name, lines = await self.respond(sender=None, messages=[{"role": "system", "content": self.system_prompt}, {"role": "user", "content": "introduce yourself"}])
+            lines.append(f"Type .help {self.nickname} to learn how to use me.")
+            for channel in channels:
+                logger.info(f"Joining channel: {channel}")
+                connection.join(channel)
+                
+                logger.info(f"Sending response to {channel}: '{' '.join(lines)}'")
+                for line in lines:
+                    connection.privmsg(channel, line)
+                    await asyncio.sleep(1.5)
 
     def on_welcome(self, connection, event):
         """
@@ -140,22 +163,9 @@ class InfiniGPT(SingleServerIRCBot):
             logger.info("Identifying to NickServ")
             time.sleep(5)
         self.change_model(connection, model=self.default_model)
-        system_prompt = self.prompt[0] + self.default_personality + self.prompt[1]
-        logger.info(f"System prompt set to '{system_prompt}'")
-        future = asyncio.run_coroutine_threadsafe(
-            self.respond(sender=None, messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": "introduce yourself"}]),
-            self.loop
-        )
-        name, lines = future.result()
-        lines.append("Type .help to learn how to use me.")
-        for channel in self._channels:
-            logger.info(f"Joining channel: {channel}")
-            connection.join(channel)
-            
-            logger.info(f"Sending response to {channel}: '{' '.join(lines)}'")
-            for line in lines:
-                connection.privmsg(channel, line)
-                asyncio.run_coroutine_threadsafe(asyncio.sleep(1.5), self.loop)
+        self.system_prompt = self.prompt[0] + self.default_personality + self.prompt[1]
+        logger.info(f"System prompt set to '{self.system_prompt}'")
+        asyncio.run_coroutine_threadsafe(self.join_channels(connection, self._channels), self.loop)
     
     def on_join(self, connection, event):
         """Actions to take when a user joins.  Currently not implemented."""
@@ -204,6 +214,19 @@ class InfiniGPT(SingleServerIRCBot):
 
         if sender != self.nickname:
             asyncio.run_coroutine_threadsafe(self.handle_message(connection, channel, sender, message), self.loop)
+
+    def on_invite(self, connection, event):
+        """
+        Joins a channel on invite.
+
+        Args:
+            connection (IRCConnection): IRC connection instance.
+            event (IRCEvent): Event details from the server.
+        """
+        channel = event.arguments[0]
+        sender = event.source.nick
+        logger.info(f"Invited to {channel} by {sender}")
+        asyncio.run_coroutine_threadsafe(self.join_channels(connection, [channel]), self.loop)
 
     def chop(self, message):
         """
@@ -346,7 +369,7 @@ class InfiniGPT(SingleServerIRCBot):
             connection.privmsg(channel if channel != "privmsg" else sender, f"Stock settings applied for {sender}")
             logger.info(f"Stock settings applied for {sender}")
     
-    async def help_menu(self, connection, sender):
+    async def help_menu(self, connection, message, sender):
         """
         Display a help menu to the user.
 
@@ -354,11 +377,13 @@ class InfiniGPT(SingleServerIRCBot):
             connection (IRCConnection): IRC connection instance.
             sender (str): Nickname of the user requesting help.
         """
-        with open("help.txt", "r") as f:
-            help_text = f.readlines()
-        for line in help_text:
-            connection.notice(sender, line.strip())
-            await asyncio.sleep(1.5)
+        if message[1]:
+            if message[1] == self.nickname:
+                with open("help.txt", "r") as f:
+                    help_text = f.readlines()
+                for line in help_text:
+                    connection.notice(sender, line.strip())
+                    await asyncio.sleep(1.5)
 
     async def handle_message(self, connection, channel, sender, message):
         """
@@ -379,10 +404,11 @@ class InfiniGPT(SingleServerIRCBot):
             ".custom": lambda: self.set_prompt(connection, channel, sender, custom=' '.join(message[1:])),
             ".reset": lambda: self.reset(connection, channel, sender),
             ".stock": lambda: self.reset(connection, channel, sender, stock=True),
-            ".help": lambda: self.help_menu(connection, sender)
+            ".help": lambda: self.help_menu(connection, message, sender)
         }
         admin_commands = {
-            ".model": lambda: self.change_model(connection, channel, model=message[1] if len(message) > 1 else None)
+            ".model": lambda: self.change_model(connection, channel, model=message[1] if len(message) > 1 else None),
+            ".join": lambda: self.join_channels(connection, [message[1]] if message[1] else None)
         }
 
         command = message[0]
@@ -390,7 +416,7 @@ class InfiniGPT(SingleServerIRCBot):
             logger.info(f"Received message from {sender} in {channel}: '{' '.join(message)}'")
             action = user_commands[command]
             await action()
-        if sender == self.admin and command in admin_commands:
+        if sender in self.admins and command in admin_commands:
             logger.info(f"Received message from {sender} in {channel}: '{' '.join(message)}'")
             action = admin_commands[command]
             await action()
@@ -412,7 +438,8 @@ class InfiniGPT(SingleServerIRCBot):
             ".help": lambda: self.help_menu(connection, sender)
         }
         admin_commands = {
-            ".model": lambda: self.change_model(connection, "privmsg", model=message[1] if len(message) > 1 else None, sender=sender)
+            ".model": lambda: self.change_model(connection, "privmsg", model=message[1] if len(message) > 1 else None, sender=sender),
+            ".join": lambda: self.join_channels(connection, [message[1]] if message[1] else None)
         }
 
         command = message[0]
@@ -420,7 +447,7 @@ class InfiniGPT(SingleServerIRCBot):
             logger.info(f"Received private message from {sender}: '{' '.join(message)}'")
             action = user_commands[command]
             await action()
-        elif sender == self.admin and command in admin_commands:
+        elif sender in self.admins and command in admin_commands:
             logger.info(f"Received private message from {sender}: '{' '.join(message)}'")
             action = admin_commands[command]
             await action()
