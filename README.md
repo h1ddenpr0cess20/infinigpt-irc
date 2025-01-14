@@ -48,7 +48,7 @@ python3 infinigpt.py
     Change model
 
 **.join** _channel_   
-    List available large language models
+    Join a channel
 
 **.help** _botname_  
     Display the help menu
