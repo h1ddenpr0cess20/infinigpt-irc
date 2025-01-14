@@ -41,6 +41,6 @@
         "nickname": "InfiniGPT",
         "password": null,
         "channels": ["#channel1", "#channel2"],
-        "admin": "adminnick"
+        "admins": ["nick1", "nick2"]
     }
 }
