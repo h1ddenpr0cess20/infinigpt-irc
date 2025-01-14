@@ -25,7 +25,7 @@ class InfiniGPT(SingleServerIRCBot):
         nickname (str): Bot's nickname on the IRC server.
         password (str): Password for NickServ identification.
         _channels (list): List of channels to join.
-        admin (str): Nickname of the bot's admin.
+        admins (list): Nicknames of the bot's admins.
         models (dict): Supported LLM models grouped by provider.
         api_keys (dict): API keys for different providers.
         default_model (str): Default model for generating responses.
