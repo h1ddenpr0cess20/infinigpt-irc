@@ -66,30 +66,22 @@ class InfiniGPT(SingleServerIRCBot):
             tuple: The name for response attribution and a list of response lines.
         """
         if self.model in self.models["openai"]:
-            headers = {
-                "Authorization": f"Bearer {self.openai_key}",
-                "Content-Type": "application/json"
-            }
+            bearer = self.openai_key
             self.url = "https://api.openai.com/v1"
         elif self.model in self.models["xai"]:
-            headers = {
-                "Authorization": f"Bearer {self.xai_key}",
-                "Content-Type": "application/json"
-            }
+            bearer = self.xai_key
             self.url = "https://api.x.ai/v1"
         elif self.model in self.models["google"]:
-            headers = {
-                "Authorization": f"Bearer {self.google_key}",
-                "Content-Type": "application/json"
-            }
+            bearer = self.google_key
             self.url = "https://generativelanguage.googleapis.com/v1beta/openai"
         elif self.model in self.models["ollama"]:
-            headers = {
-                "Authorization": f"Bearer hello_friend",
-                "Content-Type": "application/json"
-            }
+            bearer = "hello_friend"
             self.url = "http://localhost:11434/v1"
 
+        headers = {
+                "Authorization": f"Bearer {bearer}",
+                "Content-Type": "application/json"
+        }
         data = {
             "model": self.model,
             "messages": messages
@@ -149,7 +141,7 @@ class InfiniGPT(SingleServerIRCBot):
             time.sleep(5)
         self.change_model(connection, model=self.default_model)
         system_prompt = self.prompt[0] + self.default_personality + self.prompt[1]
-        logger.info(f"System prompt set to {system_prompt}")
+        logger.info(f"System prompt set to '{system_prompt}'")
         future = asyncio.run_coroutine_threadsafe(
             self.respond(sender=None, messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": "introduce yourself"}]),
             self.loop
@@ -160,7 +152,7 @@ class InfiniGPT(SingleServerIRCBot):
             logger.info(f"Joining channel: {channel}")
             connection.join(channel)
             
-            logger.info(f"Sending response to {channel}: {' '.join(lines)}")
+            logger.info(f"Sending response to {channel}: '{' '.join(lines)}'")
             for line in lines:
                 connection.privmsg(channel, line)
                 asyncio.run_coroutine_threadsafe(asyncio.sleep(1.5), self.loop)
@@ -291,7 +283,7 @@ class InfiniGPT(SingleServerIRCBot):
             name, lines = await self.respond(sender, self.messages[channel][sender])
             await self.add_history("assistant", channel, name, ' '.join(lines))
 
-        logger.info(f"Sending response to {name} in {channel}: {' '.join(lines)}")
+        logger.info(f"Sending response to {name} in {channel}: '{' '.join(lines)}'")
         connection.privmsg(channel, f"{name}:")
         await asyncio.sleep(1.5)
         for line in lines:
@@ -319,13 +311,13 @@ class InfiniGPT(SingleServerIRCBot):
             system_prompt = custom
         
         await self.add_history("system", channel, sender, system_prompt, default=False)
-        logger.info(f"System prompt for {sender} set to {system_prompt}")
+        logger.info(f"System prompt for {sender} set to '{system_prompt}'")
         
         if respond:
             await self.add_history("user", channel, sender, "introduce yourself")
             name, lines = await self.respond(sender, self.messages[channel][sender])
             await self.add_history("assistant", channel, name, ' '.join(lines))
-            logger.info(f"Sending response to {name} in {channel}: {' '.join(lines)}")
+            logger.info(f"Sending response to {name} in {channel}: '{' '.join(lines)}'")
             if channel != "privmsg":
                 connection.privmsg(channel, f"{name}:")
                 await asyncio.sleep(1.5)
@@ -349,8 +341,10 @@ class InfiniGPT(SingleServerIRCBot):
         if not stock:
             await self.set_prompt(connection, channel, sender, persona=self.default_personality, respond=False)
             connection.privmsg(channel if channel != "privmsg" else sender, f"{self.nickname} reset to default for {sender}")
+            logger.info(f"{self.nickname} reset to default for {sender}")
         else:
             connection.privmsg(channel if channel != "privmsg" else sender, f"Stock settings applied for {sender}")
+            logger.info(f"Stock settings applied for {sender}")
     
     async def help_menu(self, connection, sender):
         """
@@ -393,11 +387,11 @@ class InfiniGPT(SingleServerIRCBot):
 
         command = message[0]
         if command in user_commands:
-            logger.info(f"Received message from {sender} in {channel}: {' '.join(message)}")
+            logger.info(f"Received message from {sender} in {channel}: '{' '.join(message)}'")
             action = user_commands[command]
             await action()
         if sender == self.admin and command in admin_commands:
-            logger.info(f"Received message from {sender} in {channel}: {' '.join(message)}")
+            logger.info(f"Received message from {sender} in {channel}: '{' '.join(message)}'")
             action = admin_commands[command]
             await action()
 
@@ -423,19 +417,19 @@ class InfiniGPT(SingleServerIRCBot):
 
         command = message[0]
         if command in user_commands:
-            logger.info(f"Received private message from {sender}: {' '.join(message)}")
+            logger.info(f"Received private message from {sender}: '{' '.join(message)}'")
             action = user_commands[command]
             await action()
         elif sender == self.admin and command in admin_commands:
-            logger.info(f"Received private message from {sender}: {' '.join(message)}")
+            logger.info(f"Received private message from {sender}: '{' '.join(message)}'")
             action = admin_commands[command]
             await action()
         else:
             await self.add_history("user", "privmsg", sender, ' '.join(message))
-            logger.info(f"Received private message from {sender}: {' '.join(message)}")
+            logger.info(f"Received private message from {sender}: '{' '.join(message)}'")
             name, lines = await self.respond(sender, self.messages["privmsg"][sender])
             await self.add_history("assistant", "privmsg", sender, ' '.join(lines))
-            logger.info(f"Sending response to {sender}: {' '.join(lines)}")
+            logger.info(f"Sending response to {sender}: '{' '.join(lines)}'")
             for line in lines:
                 connection.privmsg(sender, line)
                 await asyncio.sleep(1.5)
