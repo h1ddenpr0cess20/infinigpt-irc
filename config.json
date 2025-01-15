@@ -34,7 +34,8 @@
             "temperature": 0.7,
             "top_p": 0.9,
             "frequency_penalty": 1
-        }
+        },
+        "history_size": 24
     },
     "irc": {
         "server": "irc.SERVER.TLD",
