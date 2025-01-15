@@ -387,6 +387,11 @@ class InfiniGPT(SingleServerIRCBot):
                     connection.notice(sender, line.strip())
                     await asyncio.sleep(1.5)
 
+    async def part(self, connection, channel):
+        if channel != None and channel in self.channels:
+            connection.part(channel, 'Bye')
+            logger.info(f"Left {channel}")
+
     async def handle_message(self, connection, channel, sender, message):
         """
         Handle user messages and execute corresponding commands.
@@ -410,7 +415,8 @@ class InfiniGPT(SingleServerIRCBot):
         }
         admin_commands = {
             ".model": lambda: self.change_model(connection, channel, model=message[1] if len(message) > 1 else None),
-            ".join": lambda: self.join_channels(connection, [message[1]] if message[1] else None)
+            ".join": lambda: self.join_channels(connection, [message[1]] if message[1] else None),
+            ".part": lambda: self.part(connection, message[1] if message[1] else None)
         }
 
         command = message[0]
@@ -441,7 +447,8 @@ class InfiniGPT(SingleServerIRCBot):
         }
         admin_commands = {
             ".model": lambda: self.change_model(connection, "privmsg", model=message[1] if len(message) > 1 else None, sender=sender),
-            ".join": lambda: self.join_channels(connection, [message[1]] if message[1] else None)
+            ".join": lambda: self.join_channels(connection, [message[1]] if message[1] else None),
+            ".part": lambda: self.part(connection, message[1] if message[1] else None)
         }
 
         command = message[0]

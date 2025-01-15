@@ -50,5 +50,8 @@ python3 infinigpt.py
 **.join** _channel_   
     Join a channel
 
+**.part** _channel_   
+    Leave a channel
+
 **.help** _botname_  
     Display the help menu
