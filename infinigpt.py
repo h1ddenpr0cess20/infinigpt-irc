@@ -32,6 +32,7 @@ class InfiniGPT(SingleServerIRCBot):
         default_personality (str): Default personality for the bot.
         prompt (list): System prompt template for LLM interactions.
         options (dict): Additional options for API calls (currently not implemented).
+        history_size (int): Maximum number of messages per user to retain for context.
         messages (dict): Tracks conversation history per channel and user.
     """
     def __init__(self, port=6667):
@@ -46,7 +47,7 @@ class InfiniGPT(SingleServerIRCBot):
             f.close()
 
         self.server, self.nickname, self.password, self._channels, self.admins = self.config["irc"].values()
-        self.models, self.api_keys, self.default_model, self.default_personality, self.prompt, self.options = self.config["llm"].values()
+        self.models, self.api_keys, self.default_model, self.default_personality, self.prompt, self.options, self.history_size = self.config["llm"].values()
         self.openai_key, self.xai_key, self.google_key = self.api_keys.values()
         self.personality = self.default_personality
         self.messages = {}
@@ -274,7 +275,7 @@ class InfiniGPT(SingleServerIRCBot):
                 self.messages[channel][sender].append({"role": "system", "content": self.prompt[0] + self.default_personality + self.prompt[1]})
         self.messages[channel][sender].append({"role": role, "content": message})
 
-        if len(self.messages[channel][sender]) > 24:
+        if len(self.messages[channel][sender]) > self.history_size:
             if self.messages[channel][sender][0]["role"] == "system":
                 del self.messages[channel][sender][1:3]
             else:
@@ -375,6 +376,7 @@ class InfiniGPT(SingleServerIRCBot):
 
         Args:
             connection (IRCConnection): IRC connection instance.
+            message (list): Parsed user message as a list of words.
             sender (str): Nickname of the user requesting help.
         """
         if message[1]:
@@ -461,23 +463,15 @@ class InfiniGPT(SingleServerIRCBot):
                 connection.privmsg(sender, line)
                 await asyncio.sleep(1.5)
 
-
-async def start_bot():
-    """
-    Starts the InfiniGPT bot using the current event loop.
-    """
-    bot = InfiniGPT()
-    bot.loop = asyncio.get_running_loop()
-    await asyncio.get_event_loop().run_in_executor(None, bot.start)
-
-def main():
+async def main():
     """
     Initializes and runs the InfiniGPT bot.
     """
-    asyncio.run(start_bot())
+    bot = InfiniGPT()
+    bot.loop = asyncio.get_running_loop()
+    await asyncio.to_thread(bot.start)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
-    main()
-
+    asyncio.run(main())
