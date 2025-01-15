@@ -22,6 +22,7 @@ class InfiniGPT(SingleServerIRCBot):
     
     Attributes:
         server (str): IRC server to connect to.
+        port (int): Port to connect to on the IRC server.
         nickname (str): Bot's nickname on the IRC server.
         password (str): Password for NickServ identification.
         _channels (list): List of channels to join.
@@ -35,24 +36,21 @@ class InfiniGPT(SingleServerIRCBot):
         history_size (int): Maximum number of messages per user to retain for context.
         messages (dict): Tracks conversation history per channel and user.
     """
-    def __init__(self, port=6667):
+    def __init__(self):
         """
         Initialize the InfiniGPT bot and load configurations.
-
-        Args:
-            port (int, optional): Port to connect to on the IRC server. Defaults to 6667.
         """
         with open("config.json", "r") as f:
             self.config = json.load(f)
             f.close()
 
-        self.server, self.nickname, self.password, self._channels, self.admins = self.config["irc"].values()
+        self.server, self.port, self.nickname, self.password, self._channels, self.admins = self.config["irc"].values()
         self.models, self.api_keys, self.default_model, self.default_personality, self.prompt, self.options, self.history_size = self.config["llm"].values()
         self.openai_key, self.xai_key, self.google_key = self.api_keys.values()
         self.personality = self.default_personality
         self.messages = {}
 
-        super().__init__([(self.server, port)], self.nickname, self.nickname)        
+        super().__init__([(self.server, self.port)], self.nickname, self.nickname)        
 
     async def respond(self, sender, messages, sender2=False):
         """
@@ -139,7 +137,11 @@ class InfiniGPT(SingleServerIRCBot):
             return None
         channels = [channel for channel in channels if channel.startswith("#")]
         if channels != []:
-            name, lines = await self.respond(sender=None, messages=[{"role": "system", "content": self.system_prompt}, {"role": "user", "content": "introduce yourself"}])
+            name, lines = await self.respond(
+                sender=None, 
+                messages=[
+                    {"role": "system", "content": self.system_prompt}, 
+                    {"role": "user", "content": "introduce yourself"}])
             lines.append(f"Type .help {self.nickname} to learn how to use me.")
             for channel in channels:
                 logger.info(f"Joining channel: {channel}")
@@ -389,7 +391,16 @@ class InfiniGPT(SingleServerIRCBot):
 
     async def part(self, connection, channel):
         if channel != None and channel in self.channels:
-            connection.part(channel, 'Bye')
+            name, lines = await self.respond(
+                sender=None, 
+                messages=[
+                    {"role": "system", "content": self.system_prompt}, 
+                    {"role": "user", "content": "say goodbye in a few words"}])
+            logger.info(f"Sending response to {channel}: '{' '.join(lines)}'")
+            for line in lines:
+                connection.privmsg(channel, line)
+                await asyncio.sleep(1.5)
+            connection.part(channel, "https://github.com/h1ddenpr0cess20/infinigpt-irc")
             logger.info(f"Left {channel}")
 
     async def handle_message(self, connection, channel, sender, message):
@@ -415,8 +426,8 @@ class InfiniGPT(SingleServerIRCBot):
         }
         admin_commands = {
             ".model": lambda: self.change_model(connection, channel, model=message[1] if len(message) > 1 else None),
-            ".join": lambda: self.join_channels(connection, [message[1]] if message[1] else None),
-            ".part": lambda: self.part(connection, message[1] if message[1] else None)
+            ".join": lambda: self.join_channels(connection, [message[1]] if len(message) > 1 else None),
+            ".part": lambda: self.part(connection, message[1] if len(message) > 1 else channel)
         }
 
         command = message[0]
@@ -447,8 +458,8 @@ class InfiniGPT(SingleServerIRCBot):
         }
         admin_commands = {
             ".model": lambda: self.change_model(connection, "privmsg", model=message[1] if len(message) > 1 else None, sender=sender),
-            ".join": lambda: self.join_channels(connection, [message[1]] if message[1] else None),
-            ".part": lambda: self.part(connection, message[1] if message[1] else None)
+            ".join": lambda: self.join_channels(connection, [message[1]] if len(message) > 1 else None),
+            ".part": lambda: self.part(connection, message[1] if len(message) > 1 else None)
         }
 
         command = message[0]
