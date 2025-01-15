@@ -39,6 +39,7 @@
     },
     "irc": {
         "server": "irc.SERVER.TLD",
+        "port": 6667,
         "nickname": "InfiniGPT",
         "password": null,
         "channels": ["#channel1", "#channel2"],

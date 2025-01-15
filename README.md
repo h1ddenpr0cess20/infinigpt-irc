@@ -7,14 +7,13 @@ Also available for the Matrix chat protocol at [infinigpt-matrix](https://github
 
 ```
 pip3 install irc 
-
 ```  
 Get an [OpenAI API](https://platform.openai.com/signup) key, an [xAI API](https://accounts.x.ai/) key, and a [Google API](https://aistudio.google.com/apikey) key.  Add those to config.json.  
 
 Add desired Ollama models to model dictionary if you want to use them.  
 
 Fill in the irc credentials in config.json.  
-Password is optional, but registration is required for some channels.
+Password is optional, but it is recommended because registration is required for some channels, and some users may not be able to privately message the bot unless it has identified to the server.
 
 
 ## Use
@@ -51,7 +50,7 @@ python3 infinigpt.py
     Join a channel
 
 **.part** _channel_   
-    Leave a channel
+    Leave a channel.  You can omit channel to part channel command was issued in.
 
 **.help** _botname_  
     Display the help menu
