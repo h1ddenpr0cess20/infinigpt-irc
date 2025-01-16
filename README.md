@@ -52,5 +52,8 @@ python3 infinigpt.py
 **.part** _channel_   
     Leave a channel.  You can omit channel to part channel command was issued in.
 
+**.gpersona** _personality_  
+    Set a new default personality.
+
 **.help** _botname_  
     Display the help menu
