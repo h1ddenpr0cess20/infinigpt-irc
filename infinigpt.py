@@ -47,10 +47,12 @@ class InfiniGPT(SingleServerIRCBot):
         self.server, self.port, self.nickname, self.password, self._channels, self.admins = self.config["irc"].values()
         self.models, self.api_keys, self.default_model, self.default_personality, self.prompt, self.options, self.history_size = self.config["llm"].values()
         self.openai_key, self.xai_key, self.google_key = self.api_keys.values()
-        self.personality = self.default_personality
         self.messages = {}
 
-        super().__init__([(self.server, self.port)], self.nickname, self.nickname)        
+        super().__init__([(self.server, self.port)], self.nickname, self.nickname) 
+
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+        self.log = logging.getLogger(__name__).info
 
     async def respond(self, sender, messages, sender2=False):
         """
@@ -108,7 +110,7 @@ class InfiniGPT(SingleServerIRCBot):
             for provider, models in self.models.items():
                 if model in models:
                     self.model = model
-                    logger.info(f"Model set to {self.model}")
+                    self.log(f"Model set to {self.model}")
                     if channel != None:
                         connection.privmsg(channel if channel != "privmsg" else sender, f"Model set to {self.model}")
                     return
@@ -144,10 +146,10 @@ class InfiniGPT(SingleServerIRCBot):
                     {"role": "user", "content": "introduce yourself"}])
             lines.append(f"Type .help {self.nickname} to learn how to use me.")
             for channel in channels:
-                logger.info(f"Joining channel: {channel}")
+                self.log(f"Joining channel: {channel}")
                 connection.join(channel)
                 
-                logger.info(f"Sending response to {channel}: '{' '.join(lines)}'")
+                self.log(f"Sending response to {channel}: '{' '.join(lines)}'")
                 for line in lines:
                     connection.privmsg(channel, line)
                     await asyncio.sleep(1.5)
@@ -160,14 +162,14 @@ class InfiniGPT(SingleServerIRCBot):
             connection (IRCConnection): IRC connection instance.
             event (IRCEvent): Event details from the server.
         """
-        logger.info(f"Connected to {self.server}")
+        self.log(f"Connected to {self.server}")
         if self.password != None:
             connection.privmsg("NickServ", f"IDENTIFY {self.password}")
-            logger.info("Identifying to NickServ")
+            self.log("Identifying to NickServ")
             time.sleep(5)
         self.change_model(connection, model=self.default_model)
         self.system_prompt = self.prompt[0] + self.default_personality + self.prompt[1]
-        logger.info(f"System prompt set to '{self.system_prompt}'")
+        self.log(f"System prompt set to '{self.system_prompt}'")
         asyncio.run_coroutine_threadsafe(self.join_channels(connection, self._channels), self.loop)
     
     def on_join(self, connection, event):
@@ -228,7 +230,7 @@ class InfiniGPT(SingleServerIRCBot):
         """
         channel = event.arguments[0]
         sender = event.source.nick
-        logger.info(f"Invited to {channel} by {sender}")
+        self.log(f"Invited to {channel} by {sender}")
         asyncio.run_coroutine_threadsafe(self.join_channels(connection, [channel]), self.loop)
 
     def chop(self, message):
@@ -309,7 +311,7 @@ class InfiniGPT(SingleServerIRCBot):
             name, lines = await self.respond(sender, self.messages[channel][sender])
             await self.add_history("assistant", channel, name, ' '.join(lines))
 
-        logger.info(f"Sending response to {name} in {channel}: '{' '.join(lines)}'")
+        self.log(f"Sending response to {name} in {channel}: '{' '.join(lines)}'")
         connection.privmsg(channel, f"{name}:")
         await asyncio.sleep(1.5)
         for line in lines:
@@ -337,13 +339,13 @@ class InfiniGPT(SingleServerIRCBot):
             system_prompt = custom
         
         await self.add_history("system", channel, sender, system_prompt, default=False)
-        logger.info(f"System prompt for {sender} set to '{system_prompt}'")
+        self.log(f"System prompt for {sender} set to '{system_prompt}'")
         
         if respond:
             await self.add_history("user", channel, sender, "introduce yourself")
             name, lines = await self.respond(sender, self.messages[channel][sender])
             await self.add_history("assistant", channel, name, ' '.join(lines))
-            logger.info(f"Sending response to {name} in {channel}: '{' '.join(lines)}'")
+            self.log(f"Sending response to {name} in {channel}: '{' '.join(lines)}'")
             if channel != "privmsg":
                 connection.privmsg(channel, f"{name}:")
                 await asyncio.sleep(1.5)
@@ -367,10 +369,10 @@ class InfiniGPT(SingleServerIRCBot):
         if not stock:
             await self.set_prompt(connection, channel, sender, persona=self.default_personality, respond=False)
             connection.privmsg(channel if channel != "privmsg" else sender, f"{self.nickname} reset to default for {sender}")
-            logger.info(f"{self.nickname} reset to default for {sender}")
+            self.log(f"{self.nickname} reset to default for {sender}")
         else:
             connection.privmsg(channel if channel != "privmsg" else sender, f"Stock settings applied for {sender}")
-            logger.info(f"Stock settings applied for {sender}")
+            self.log(f"Stock settings applied for {sender}")
     
     async def help_menu(self, connection, message, sender):
         """
@@ -396,12 +398,24 @@ class InfiniGPT(SingleServerIRCBot):
                 messages=[
                     {"role": "system", "content": self.system_prompt}, 
                     {"role": "user", "content": "say goodbye in a few words"}])
-            logger.info(f"Sending response to {channel}: '{' '.join(lines)}'")
+            self.log(f"Sending response to {channel}: '{' '.join(lines)}'")
             for line in lines:
                 connection.privmsg(channel, line)
                 await asyncio.sleep(1.5)
             connection.part(channel, "https://github.com/h1ddenpr0cess20/infinigpt-irc")
-            logger.info(f"Left {channel}")
+            self.log(f"Left {channel}")
+
+    async def gpersona(self, persona):
+        """
+        Change the default personality
+
+        Args:
+            persona (str): The new personality
+        """
+        if persona != None:
+            self.default_personality = persona
+            self.system_prompt = self.prompt[0] + self.default_personality + self.prompt[1]
+            self.log(f"Default personality set to {self.default_personality}")
 
     async def handle_message(self, connection, channel, sender, message):
         """
@@ -427,16 +441,17 @@ class InfiniGPT(SingleServerIRCBot):
         admin_commands = {
             ".model": lambda: self.change_model(connection, channel, model=message[1] if len(message) > 1 else None),
             ".join": lambda: self.join_channels(connection, [message[1]] if len(message) > 1 else None),
-            ".part": lambda: self.part(connection, message[1] if len(message) > 1 else channel)
+            ".part": lambda: self.part(connection, message[1] if len(message) > 1 else channel),
+            ".gpersona": lambda: self.gpersona(" ".join(message[1:]) if len(message) > 1 else None)
         }
 
         command = message[0]
         if command in user_commands:
-            logger.info(f"Received message from {sender} in {channel}: '{' '.join(message)}'")
+            self.log(f"Received message from {sender} in {channel}: '{' '.join(message)}'")
             action = user_commands[command]
             await action()
         if sender in self.admins and command in admin_commands:
-            logger.info(f"Received message from {sender} in {channel}: '{' '.join(message)}'")
+            self.log(f"Received message from {sender} in {channel}: '{' '.join(message)}'")
             action = admin_commands[command]
             await action()
 
@@ -459,37 +474,36 @@ class InfiniGPT(SingleServerIRCBot):
         admin_commands = {
             ".model": lambda: self.change_model(connection, "privmsg", model=message[1] if len(message) > 1 else None, sender=sender),
             ".join": lambda: self.join_channels(connection, [message[1]] if len(message) > 1 else None),
-            ".part": lambda: self.part(connection, message[1] if len(message) > 1 else None)
+            ".part": lambda: self.part(connection, message[1] if len(message) > 1 else None),
+            ".gpersona": lambda: self.gpersona(" ".join(message[1:]) if len(message) > 1 else None)
         }
 
         command = message[0]
         if command in user_commands:
-            logger.info(f"Received private message from {sender}: '{' '.join(message)}'")
+            self.log(f"Received private message from {sender}: '{' '.join(message)}'")
             action = user_commands[command]
             await action()
         elif sender in self.admins and command in admin_commands:
-            logger.info(f"Received private message from {sender}: '{' '.join(message)}'")
+            self.log(f"Received private message from {sender}: '{' '.join(message)}'")
             action = admin_commands[command]
             await action()
         else:
             await self.add_history("user", "privmsg", sender, ' '.join(message))
-            logger.info(f"Received private message from {sender}: '{' '.join(message)}'")
+            self.log(f"Received private message from {sender}: '{' '.join(message)}'")
             name, lines = await self.respond(sender, self.messages["privmsg"][sender])
             await self.add_history("assistant", "privmsg", sender, ' '.join(lines))
-            logger.info(f"Sending response to {sender}: '{' '.join(lines)}'")
+            self.log(f"Sending response to {sender}: '{' '.join(lines)}'")
             for line in lines:
                 connection.privmsg(sender, line)
                 await asyncio.sleep(1.5)
-
-async def main():
-    """
-    Initializes and runs the InfiniGPT bot.
-    """
-    bot = InfiniGPT()
-    bot.loop = asyncio.get_running_loop()
-    await asyncio.to_thread(bot.start)
+    
+    async def main(self):
+        """
+        Initializes and runs the InfiniGPT bot.
+        """
+        self.loop = asyncio.get_running_loop()
+        await asyncio.to_thread(self.start)
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    logger = logging.getLogger(__name__)
-    asyncio.run(main())
+    bot = InfiniGPT()
+    asyncio.run(bot.main())

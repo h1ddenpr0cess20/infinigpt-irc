@@ -5,8 +5,9 @@ I am an AI chatbot.  I can have any personality you want me to have.  Each user 
 .custom <prompt> to use a custom system prompt instead of a persona.
 .stock to set to stock settings. 
 .reset to reset to my default personality.
-.model to list available models.
-.model <modelname> to change model.
-.join <channel> to join a channel.
-.part <channel> to leave a channel.
+.model to list available models. (admin only)
+.model <modelname> to change model. (admin only)
+.join <channel> to join a channel. (admin only)
+.part <channel> to leave a channel. (admin only)
+.gpersona <personality> to set a new global default personality (admin only)
 Available at https://github.com/h1ddenpr0cess20/infinigpt-irc
