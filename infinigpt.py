@@ -54,106 +54,6 @@ class InfiniGPT(SingleServerIRCBot):
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
         self.log = logging.getLogger(__name__).info
 
-    async def respond(self, sender, messages, sender2=False):
-        """
-        Generate a response using the configured LLM.
-
-        Args:
-            sender (str): Nickname of the sender.
-            messages (list): Message history to provide as context.
-            sender2 (str, optional): Alternative sender name for response tagging.
-
-        Returns:
-            tuple: The name for response attribution and a list of response lines.
-        """
-        if self.model in self.models["openai"]:
-            bearer = self.openai_key
-            self.url = "https://api.openai.com/v1"
-        elif self.model in self.models["xai"]:
-            bearer = self.xai_key
-            self.url = "https://api.x.ai/v1"
-        elif self.model in self.models["google"]:
-            bearer = self.google_key
-            self.url = "https://generativelanguage.googleapis.com/v1beta/openai"
-        elif self.model in self.models["ollama"]:
-            bearer = "hello_friend"
-            self.url = "http://localhost:11434/v1"
-
-        headers = {
-            "Authorization": f"Bearer {bearer}",
-            "Content-Type": "application/json"
-        }
-        data = {
-            "model": self.model,
-            "messages": messages
-        }
-
-        async with httpx.AsyncClient() as client:
-            url = f"{self.url}/chat/completions"
-            response = await client.post(url=url, headers=headers, json=data, timeout=180)
-            response.raise_for_status()
-            result = response.json()
-        name = sender2 if sender2 else sender
-        lines = self.chop(result['choices'][0]['message']['content'])
-        return name, lines
-    
-    def change_model(self, connection, channel=None, model=None, sender=None):
-        """
-        Change the active LLM model.
-
-        Args:
-            connection (IRCConnection): IRC connection instance.
-            channel (str, optional): Channel to send feedback messages to.
-            model (str, optional): Desired model to switch to.
-        """
-        if model != None:
-            for provider, models in self.models.items():
-                if model in models:
-                    self.model = model
-                    self.log(f"Model set to {self.model}")
-                    if channel != None:
-                        connection.privmsg(channel if channel != "privmsg" else sender, f"Model set to {self.model}")
-                    return
-            if channel != None:
-                connection.privmsg(channel if channel != "privmsg" else sender, f"Model {model} not found in available models.")
-        else:
-            if channel != None:
-                current_model = [
-                    f"Current model: {self.model}",
-                    "Available models: " + ", ".join(
-                        [model for provider, models in self.models.items() for model in models]
-                    )
-                ]
-                for line in current_model:
-                    connection.privmsg(channel if channel != "privmsg" else sender, line)
-                    
-    async def join_channels(self, connection, channels):
-        """
-        Join a list of channels, or do nothing if none were provided.
-
-        Args:
-            connection (IRCConnection): IRC connection instance.
-            channels (list): The channels to join
-        """
-        if channels == None:
-            return None
-        channels = [channel for channel in channels if channel.startswith("#")]
-        if channels != []:
-            name, lines = await self.respond(
-                sender=None, 
-                messages=[
-                    {"role": "system", "content": self.system_prompt}, 
-                    {"role": "user", "content": "introduce yourself"}])
-            lines.append(f"Type .help {self.nickname} to learn how to use me.")
-            for channel in channels:
-                self.log(f"Joining channel: {channel}")
-                connection.join(channel)
-                
-                self.log(f"Sending response to {channel}: '{' '.join(lines)}'")
-                for line in lines:
-                    connection.privmsg(channel, line)
-                    await asyncio.sleep(1.5)
-
     def on_welcome(self, connection, event):
         """
         Handle server welcome event and join configured channels.
@@ -167,14 +67,10 @@ class InfiniGPT(SingleServerIRCBot):
             connection.privmsg("NickServ", f"IDENTIFY {self.password}")
             self.log("Identifying to NickServ")
             time.sleep(5)
-        self.change_model(connection, model=self.default_model)
+        asyncio.run_coroutine_threadsafe(self.change_model(connection, model=self.default_model), self.loop)
         self.system_prompt = self.prompt[0] + self.default_personality + self.prompt[1]
         self.log(f"System prompt set to '{self.system_prompt}'")
         asyncio.run_coroutine_threadsafe(self.join_channels(connection, self._channels), self.loop)
-    
-    def on_join(self, connection, event):
-        """Actions to take when a user joins.  Currently not implemented."""
-        pass
 
     def on_nicknameinuse(self, connection, event):
         """
@@ -258,7 +154,107 @@ class InfiniGPT(SingleServerIRCBot):
                 newlines.extend(wrapped_lines) 
             else:
                 newlines.append(line) 
-        return newlines  
+        return newlines
+
+    async def respond(self, sender, messages, sender2=False):
+        """
+        Generate a response using the configured LLM.
+
+        Args:
+            sender (str): Nickname of the sender.
+            messages (list): Message history to provide as context.
+            sender2 (str, optional): Alternative sender name for response tagging.
+
+        Returns:
+            tuple: The name for response attribution and a list of response lines.
+        """
+        if self.model in self.models["openai"]:
+            bearer = self.openai_key
+            self.url = "https://api.openai.com/v1"
+        elif self.model in self.models["xai"]:
+            bearer = self.xai_key
+            self.url = "https://api.x.ai/v1"
+        elif self.model in self.models["google"]:
+            bearer = self.google_key
+            self.url = "https://generativelanguage.googleapis.com/v1beta/openai"
+        elif self.model in self.models["ollama"]:
+            bearer = "hello_friend"
+            self.url = "http://localhost:11434/v1"
+
+        headers = {
+            "Authorization": f"Bearer {bearer}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": self.model,
+            "messages": messages
+        }
+
+        async with httpx.AsyncClient() as client:
+            url = f"{self.url}/chat/completions"
+            response = await client.post(url=url, headers=headers, json=data, timeout=180)
+            response.raise_for_status()
+            result = response.json()
+        name = sender2 if sender2 else sender
+        lines = self.chop(result['choices'][0]['message']['content'])
+        return name, lines
+    
+    async def change_model(self, connection, channel=None, model=None, sender=None):
+        """
+        Change the active LLM model.
+
+        Args:
+            connection (IRCConnection): IRC connection instance.
+            channel (str, optional): Channel to send feedback messages to.
+            model (str, optional): Desired model to switch to.
+        """
+        if model != None:
+            for provider, models in self.models.items():
+                if model in models:
+                    self.model = model
+                    self.log(f"Model set to {self.model}")
+                    if channel != None:
+                        connection.privmsg(channel if channel != "privmsg" else sender, f"Model set to {self.model}")
+                    return
+            if channel != None:
+                connection.privmsg(channel if channel != "privmsg" else sender, f"Model {model} not found in available models.")
+        else:
+            if channel != None:
+                current_model = [
+                    f"Current model: {self.model}",
+                    "Available models: " + ", ".join(
+                        [model for provider, models in self.models.items() for model in models]
+                    )
+                ]
+                for line in current_model:
+                    connection.privmsg(channel if channel != "privmsg" else sender, line)
+                    
+    async def join_channels(self, connection, channels):
+        """
+        Join a list of channels, or do nothing if none were provided.
+
+        Args:
+            connection (IRCConnection): IRC connection instance.
+            channels (list): The channels to join
+        """
+        if channels == None:
+            return None
+        channels = [channel for channel in channels if channel.startswith("#")]
+        if channels != []:
+            name, lines = await self.respond(
+                sender=None, 
+                messages=[
+                    {"role": "system", "content": self.system_prompt}, 
+                    {"role": "user", "content": "introduce yourself"}])
+            lines.append(f"Type .help {self.nickname} to learn how to use me.")
+            for channel in channels:
+                self.log(f"Joining channel: {channel}")
+                connection.join(channel)
+                
+                self.log(f"Sending response to {channel}: '{' '.join(lines)}'")
+                for line in lines:
+                    connection.privmsg(channel, line)
+                    await asyncio.sleep(1.5)  
 
     async def add_history(self, role, channel, sender, message, default=True):
         """
@@ -281,9 +277,9 @@ class InfiniGPT(SingleServerIRCBot):
 
         if len(self.messages[channel][sender]) > self.history_size:
             if self.messages[channel][sender][0]["role"] == "system":
-                del self.messages[channel][sender][1:3]
+                self.messages[channel][sender].pop(1)
             else:
-                del self.messages[channel][sender][0:2]
+                self.messages[channel][sender].pop(0)
 
     async def ai(self, connection, channel, sender, message, x=False):
         """
@@ -392,6 +388,13 @@ class InfiniGPT(SingleServerIRCBot):
                     await asyncio.sleep(1.5)
 
     async def part(self, connection, channel):
+        """
+        Part a channel, first sending a generated farewell message
+
+        Args:
+            connection (IRCConnection): IRC connection instance.
+            channel (str): Channel to part.
+        """
         if channel != None and channel in self.channels:
             name, lines = await self.respond(
                 sender=None, 
@@ -403,6 +406,7 @@ class InfiniGPT(SingleServerIRCBot):
                 connection.privmsg(channel, line)
                 await asyncio.sleep(1.5)
             connection.part(channel, "https://github.com/h1ddenpr0cess20/infinigpt-irc")
+            self.messages[channel].clear()
             self.log(f"Left {channel}")
 
     async def gpersona(self, persona):
