@@ -247,11 +247,19 @@ class InfiniGPT(SingleServerIRCBot):
                     {"role": "system", "content": self.system_prompt}, 
                     {"role": "user", "content": "introduce yourself"}])
             lines.append(f"Type .help {self.nickname} to learn how to use me.")
+            try:
+                thinking = ' '.join(lines[lines.index('<think>'):lines.index('</think>')+1])
+            except:
+                thinking = None
+            if thinking != None:
+                self.log(f"Thinking: {thinking}")
+                lines = lines[lines.index('</think>')+2:]
+            joined_lines = ' '.join(lines)
             for channel in channels:
                 self.log(f"Joining channel: {channel}")
                 connection.join(channel)
                 
-                self.log(f"Sending response to {channel}: '{' '.join(lines)}'")
+                self.log(f"Sending response to {channel}: '{joined_lines}'")
                 for line in lines:
                     connection.privmsg(channel, line)
                     await asyncio.sleep(1.5)  
@@ -305,9 +313,17 @@ class InfiniGPT(SingleServerIRCBot):
             message = ' '.join(message[1:])
             await self.add_history("user", channel, sender, message)
             name, lines = await self.respond(sender, self.messages[channel][sender])
-            await self.add_history("assistant", channel, name, ' '.join(lines))
+            try:
+                thinking = ' '.join(lines[lines.index('<think>'):lines.index('</think>')+1])
+            except:
+                thinking = None
+            if thinking != None:
+                self.log(f"Thinking: {thinking}")
+                lines = lines[lines.index('</think>')+2:]
+            joined_lines = ' '.join(lines)
+            await self.add_history("assistant", channel, name, joined_lines)
 
-        self.log(f"Sending response to {name} in {channel}: '{' '.join(lines)}'")
+        self.log(f"Sending response to {name} in {channel}: '{joined_lines}'")
         connection.privmsg(channel, f"{name}:")
         await asyncio.sleep(1.5)
         for line in lines:
@@ -340,8 +356,16 @@ class InfiniGPT(SingleServerIRCBot):
         if respond:
             await self.add_history("user", channel, sender, "introduce yourself")
             name, lines = await self.respond(sender, self.messages[channel][sender])
-            await self.add_history("assistant", channel, name, ' '.join(lines))
-            self.log(f"Sending response to {name} in {channel}: '{' '.join(lines)}'")
+            try:
+                thinking = ' '.join(lines[lines.index('<think>'):lines.index('</think>')+1])
+            except:
+                thinking = None
+            if thinking != None:
+                self.log(f"Thinking: {thinking}")
+                lines = lines[lines.index('</think>')+2:]
+            joined_lines = ' '.join(lines)
+            await self.add_history("assistant", channel, name, joined_lines)
+            self.log(f"Sending response to {name} in {channel}: '{joined_lines}'")
             if channel != "privmsg":
                 connection.privmsg(channel, f"{name}:")
                 await asyncio.sleep(1.5)
@@ -401,7 +425,15 @@ class InfiniGPT(SingleServerIRCBot):
                 messages=[
                     {"role": "system", "content": self.system_prompt}, 
                     {"role": "user", "content": "say goodbye in a few words"}])
-            self.log(f"Sending response to {channel}: '{' '.join(lines)}'")
+            try:
+                thinking = ' '.join(lines[lines.index('<think>'):lines.index('</think>')+1])
+            except:
+                thinking = None
+            if thinking != None:
+                self.log(f"Thinking: {thinking}")
+                lines = lines[lines.index('</think>')+2:]
+            joined_lines = ' '.join(lines)
+            self.log(f"Sending response to {channel}: '{joined_lines}'")
             for line in lines:
                 connection.privmsg(channel, line)
                 await asyncio.sleep(1.5)
@@ -495,8 +527,16 @@ class InfiniGPT(SingleServerIRCBot):
             await self.add_history("user", "privmsg", sender, ' '.join(message))
             self.log(f"Received private message from {sender}: '{' '.join(message)}'")
             name, lines = await self.respond(sender, self.messages["privmsg"][sender])
-            await self.add_history("assistant", "privmsg", sender, ' '.join(lines))
-            self.log(f"Sending response to {sender}: '{' '.join(lines)}'")
+            try:
+                thinking = ' '.join(lines[lines.index('<think>'):lines.index('</think>')+1])
+            except:
+                thinking = None
+            if thinking != None:
+                self.log(f"Thinking: {thinking}")
+                lines = lines[lines.index('</think>')+2:]
+            joined_lines = ' '.join(lines)
+            await self.add_history("assistant", "privmsg", sender, joined_lines)
+            self.log(f"Sending response to {sender}: '{joined_lines}'")
             for line in lines:
                 connection.privmsg(sender, line)
                 await asyncio.sleep(1.5)
