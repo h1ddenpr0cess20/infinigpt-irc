@@ -190,7 +190,7 @@ class InfiniGPT(SingleServerIRCBot):
             "messages": messages
         }
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(120.0)) as client:
             url = f"{self.url}/chat/completions"
             response = await client.post(url=url, headers=headers, json=data, timeout=180)
             response.raise_for_status()
@@ -199,6 +199,27 @@ class InfiniGPT(SingleServerIRCBot):
         lines = self.chop(result['choices'][0]['message']['content'])
         return name, lines
     
+    def thinking(self, lines):
+        """
+        Handles separation of thinking process from responses of reasoning models like DeepSeek-R1.
+
+        Args:
+        lines (list): A list of lines of an LLM response.
+
+        """
+        try:
+            thinking = ' '.join(lines[lines.index('<think>'):lines.index('</think>')+1])
+        except:
+            thinking = None
+
+        if thinking != None:
+            self.log(f"Thinking: {thinking}")
+            lines = lines[lines.index('</think>')+2:]
+
+        joined_lines = ' '.join(lines)
+
+        return lines, joined_lines
+
     async def change_model(self, connection, channel=None, model=None, sender=None):
         """
         Change the active LLM model.
@@ -226,9 +247,10 @@ class InfiniGPT(SingleServerIRCBot):
                         [model for provider, models in self.models.items() for model in models]
                     )
                 ]
-                for line in current_model:
-                    connection.privmsg(channel if channel != "privmsg" else sender, line)
-                    
+                lines = self.chop('\n'.join(current_model))
+                for line in lines:
+                    connection.privmsg(channel if channel != "privmsg" else sender, line)        
+
     async def join_channels(self, connection, channels):
         """
         Join a list of channels, or do nothing if none were provided.
@@ -247,14 +269,7 @@ class InfiniGPT(SingleServerIRCBot):
                     {"role": "system", "content": self.system_prompt}, 
                     {"role": "user", "content": "introduce yourself"}])
             lines.append(f"Type .help {self.nickname} to learn how to use me.")
-            try:
-                thinking = ' '.join(lines[lines.index('<think>'):lines.index('</think>')+1])
-            except:
-                thinking = None
-            if thinking != None:
-                self.log(f"Thinking: {thinking}")
-                lines = lines[lines.index('</think>')+2:]
-            joined_lines = ' '.join(lines)
+            lines, joined_lines = self.thinking(lines)
             for channel in channels:
                 self.log(f"Joining channel: {channel}")
                 connection.join(channel)
@@ -313,14 +328,7 @@ class InfiniGPT(SingleServerIRCBot):
             message = ' '.join(message[1:])
             await self.add_history("user", channel, sender, message)
             name, lines = await self.respond(sender, self.messages[channel][sender])
-            try:
-                thinking = ' '.join(lines[lines.index('<think>'):lines.index('</think>')+1])
-            except:
-                thinking = None
-            if thinking != None:
-                self.log(f"Thinking: {thinking}")
-                lines = lines[lines.index('</think>')+2:]
-            joined_lines = ' '.join(lines)
+            lines, joined_lines = self.thinking(lines)
             await self.add_history("assistant", channel, name, joined_lines)
 
         self.log(f"Sending response to {name} in {channel}: '{joined_lines}'")
@@ -356,14 +364,7 @@ class InfiniGPT(SingleServerIRCBot):
         if respond:
             await self.add_history("user", channel, sender, "introduce yourself")
             name, lines = await self.respond(sender, self.messages[channel][sender])
-            try:
-                thinking = ' '.join(lines[lines.index('<think>'):lines.index('</think>')+1])
-            except:
-                thinking = None
-            if thinking != None:
-                self.log(f"Thinking: {thinking}")
-                lines = lines[lines.index('</think>')+2:]
-            joined_lines = ' '.join(lines)
+            lines, joined_lines = self.thinking(lines)
             await self.add_history("assistant", channel, name, joined_lines)
             self.log(f"Sending response to {name} in {channel}: '{joined_lines}'")
             if channel != "privmsg":
@@ -425,14 +426,7 @@ class InfiniGPT(SingleServerIRCBot):
                 messages=[
                     {"role": "system", "content": self.system_prompt}, 
                     {"role": "user", "content": "say goodbye in a few words"}])
-            try:
-                thinking = ' '.join(lines[lines.index('<think>'):lines.index('</think>')+1])
-            except:
-                thinking = None
-            if thinking != None:
-                self.log(f"Thinking: {thinking}")
-                lines = lines[lines.index('</think>')+2:]
-            joined_lines = ' '.join(lines)
+            lines, joined_lines = self.thinking(lines)
             self.log(f"Sending response to {channel}: '{joined_lines}'")
             for line in lines:
                 connection.privmsg(channel, line)
@@ -527,14 +521,7 @@ class InfiniGPT(SingleServerIRCBot):
             await self.add_history("user", "privmsg", sender, ' '.join(message))
             self.log(f"Received private message from {sender}: '{' '.join(message)}'")
             name, lines = await self.respond(sender, self.messages["privmsg"][sender])
-            try:
-                thinking = ' '.join(lines[lines.index('<think>'):lines.index('</think>')+1])
-            except:
-                thinking = None
-            if thinking != None:
-                self.log(f"Thinking: {thinking}")
-                lines = lines[lines.index('</think>')+2:]
-            joined_lines = ' '.join(lines)
+            lines, joined_lines = self.thinking(lines)
             await self.add_history("assistant", "privmsg", sender, joined_lines)
             self.log(f"Sending response to {sender}: '{joined_lines}'")
             for line in lines:
