@@ -6,7 +6,7 @@ Also available for the Matrix chat protocol at [infinigpt-matrix](https://github
 ## Setup
 
 ```
-pip3 install irc 
+pip install -r requirements.txt 
 ```  
 Get an [OpenAI API](https://platform.openai.com/signup) key, an [xAI API](https://accounts.x.ai/) key, and a [Google API](https://aistudio.google.com/apikey) key.  Add those to config.json.  
 
@@ -18,7 +18,7 @@ Password is optional, but it is recommended because registration is required for
 
 ## Use
 ```
-python3 infinigpt.py
+python infinigpt.py
 ```  
 **.ai** _message_ or **botname:** _message_  
     Basic usage.  You can also privately message the bot without using these commands.
