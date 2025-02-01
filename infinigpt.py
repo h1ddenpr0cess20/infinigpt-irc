@@ -32,7 +32,7 @@ class InfiniGPT(SingleServerIRCBot):
         default_model (str): Default model for generating responses.
         default_personality (str): Default personality for the bot.
         prompt (list): System prompt template for LLM interactions.
-        options (dict): Additional options for API calls (currently not implemented).
+        options (dict): Additional options for API calls.
         history_size (int): Maximum number of messages per user to retain for context.
         messages (dict): Tracks conversation history per channel and user.
     """
@@ -189,6 +189,9 @@ class InfiniGPT(SingleServerIRCBot):
             "model": self.model,
             "messages": messages
         }
+
+        if self.model not in self.models["google"]:
+            data.update(self.options)
 
         async with httpx.AsyncClient(timeout=httpx.Timeout(120.0)) as client:
             url = f"{self.url}/chat/completions"
