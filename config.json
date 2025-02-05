@@ -18,8 +18,10 @@
                 "gemini-2.0-flash-exp"
             ],
             "ollama": [
-                "llama3.2:3b-instruct-fp16",
-                "phi4"                
+                "llama3.2-vision",
+                "phi4",
+                "deepseek-r1:14b-qwen-distill-q4_K_M",
+                "qwen2.5:14b"                
             ]
         },
         "api_keys": {
@@ -35,7 +37,8 @@
             "top_p": 0.9,
             "frequency_penalty": 1
         },
-        "history_size": 24
+        "history_size": 24,
+        "ollama_url": "localhost:11434"
     },
     "irc": {
         "server": "irc.SERVER.TLD",
