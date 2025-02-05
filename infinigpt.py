@@ -325,7 +325,7 @@ class InfiniGPT(SingleServerIRCBot):
                 await self.add_history("user", channel, target, message)
                 name, lines = await self.respond(target, self.messages[channel][target], sender2=sender)
                 lines, joined_lines = await self.thinking(lines)
-                await self.add_history("assistant", channel, target, ' '.join(joined_lines))
+                await self.add_history("assistant", channel, target, joined_lines)
             else:
                 pass
         else:
