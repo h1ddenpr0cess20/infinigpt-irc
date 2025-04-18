@@ -8,13 +8,14 @@ Also available for the Matrix chat protocol at [infinigpt-matrix](https://github
 ```
 pip install -r requirements.txt 
 ```  
-Get an [OpenAI API](https://platform.openai.com/signup) key, an [xAI API](https://accounts.x.ai/) key, and a [Google API](https://aistudio.google.com/apikey) key.  Add those to config.json.  Add/remove the models you would like to be available from the model lists. 
+Get an [OpenAI API](https://platform.openai.com/signup) key, an [xAI API](https://accounts.x.ai/) key, a [Google API](https://aistudio.google.com/apikey) key, and a [Mistral API](https://mistral.ai/) key, if you would like to use those services.  Add those to config.json.  Add/remove the models you would like to be available from the model lists.  
 
-Familiarize yourself with [Ollama](http://ollama.com/), make sure you can run local LLMs.  Install the models you want to use and replace the example Ollama models in config.json.  If you would like to use with Ollama only, you can leave the lists of models for the other services empty.
+Familiarize yourself with [Ollama](http://ollama.com/), make sure you can run local LLMs.  Install the models you want to use and replace the example Ollama models in config.json.  If you would like to use with Ollama only, you can leave the lists of models for the other services empty.  
 
 Fill in the irc credentials in config.json.  
 Password is optional, but it is recommended because registration is required for some channels, and some users may not be able to privately message the bot unless it has identified to the server.
 
+You can add your own tools to the tools.py file and add them to the schema.json file.  I have included a crypto price tool as an example.
 
 ## Use
 ```

@@ -6,6 +6,8 @@ import json
 import time
 from irc.bot import SingleServerIRCBot
 
+from tools import *
+
 class InfiniGPT(SingleServerIRCBot):
     """
     An asynchronous IRC bot integrated with multiple LLM APIs.
@@ -35,6 +37,10 @@ class InfiniGPT(SingleServerIRCBot):
         options (dict): Additional options for API calls.
         history_size (int): Maximum number of messages per user to retain for context.
         messages (dict): Tracks conversation history per channel and user.
+        openai_key (str): API key for OpenAI.
+        xai_key (str): API key for xAI.
+        google_key (str): API key for Google.
+        mistral_key (str): API key for Mistral.
     """
     def __init__(self):
         """
@@ -43,10 +49,13 @@ class InfiniGPT(SingleServerIRCBot):
         with open("config.json", "r") as f:
             self.config = json.load(f)
             f.close()
+        
+        with open("schema.json") as f:
+            self.tools = json.load(f)
 
         self.server, self.port, self.nickname, self.password, self._channels, self.admins = self.config["irc"].values()
         self.models, self.api_keys, self.default_model, self.default_personality, self.prompt, self.options, self.history_size, self.ollama_url = self.config["llm"].values()
-        self.openai_key, self.xai_key, self.google_key = self.api_keys.values()
+        self.openai_key, self.xai_key, self.google_key, self.mistral_key = self.api_keys.values()
         self.messages = {}
 
         super().__init__([(self.server, self.port)], self.nickname, self.nickname) 
@@ -156,7 +165,7 @@ class InfiniGPT(SingleServerIRCBot):
                 newlines.append(line) 
         return newlines
 
-    async def respond(self, sender, messages, sender2=False):
+    async def respond(self, channel, sender, messages, sender2=False, tools=None):
         """
         Generate a response using the configured LLM.
 
@@ -180,6 +189,9 @@ class InfiniGPT(SingleServerIRCBot):
         elif self.model in self.models["ollama"]:
             bearer = "hello_friend"
             self.url = f"http://{self.ollama_url}/v1"
+        elif self.model in self.models["mistral"]:
+            bearer = self.mistral_key
+            self.url = "https://api.mistral.ai/v1"
 
         headers = {
             "Authorization": f"Bearer {bearer}",
@@ -187,18 +199,68 @@ class InfiniGPT(SingleServerIRCBot):
         }
         data = {
             "model": self.model,
-            "messages": messages
+            "messages": messages,
+            "tools": tools
         }
 
         if self.model not in self.models["google"]:
             data.update(self.options)
-
-        async with httpx.AsyncClient(timeout=httpx.Timeout(120.0)) as client:
-            url = f"{self.url}/chat/completions"
-            response = await client.post(url=url, headers=headers, json=data, timeout=180)
-            response.raise_for_status()
-            result = response.json()
+        
         name = sender2 if sender2 else sender
+        url = f"{self.url}/chat/completions"
+
+        async def get_completion(data):
+            async with httpx.AsyncClient(timeout=httpx.Timeout(120.0)) as client:
+                response = await client.post(
+                    url,
+                    headers=headers,
+                    json=data
+                )
+                return response.json()
+
+        if tools is not None:
+            result = await get_completion(data)
+            max_iterations = 10
+            iterations = 0
+            while result['choices'][0]['message'].get('tool_calls', []) and iterations < max_iterations:
+                msg = result['choices'][0]['message']
+                self.messages[channel][sender].append(msg)
+                tool_calls = msg.get('tool_calls', [])
+                for tool_call in tool_calls:
+                    tool_name = tool_call['function']['name']
+                    args = json.loads(tool_call['function']['arguments'])
+                    self.log(f"Calling tool: {tool_name} with args: {args}")
+                    try:
+                        tool_result = await globals()[tool_name](**args)
+                    except Exception as e:
+                        self.log(f"Error calling tool {tool_name}: {e}")
+                        tool_result = f"Error calling tool {tool_name}: {e}"
+                    self.messages[channel][sender].append({
+                        "role": "tool",
+                        "tool_call_id": tool_call['id'],
+                        "content": tool_result
+                    })
+                data["messages"] = self.messages[channel][sender]
+                result = await get_completion(data)
+                iterations += 1
+
+            if iterations >= max_iterations:
+                self.log(f"WARNING: Tool calls reached maximum iterations ({max_iterations}) for {sender} in {channel}. Response may be incomplete.")
+
+            iterations = 0
+            while result['choices'][0]['message'].get('content') in [None, '', '\n'] and iterations < max_iterations:
+                data["messages"] = self.messages[channel][sender]
+                result = await get_completion(data)
+                iterations += 1
+
+            if iterations >= max_iterations:
+                self.log(f"WARNING: Empty content handling reached maximum iterations ({max_iterations}) for {sender} in {channel}. Response may be incomplete.")
+
+            text = result['choices'][0]['message']['content'] or ''
+            lines = self.chop(text.strip())
+            return name, lines
+
+        result = await get_completion(data)
         lines = self.chop(result['choices'][0]['message']['content'])
         return name, lines
     
@@ -266,7 +328,7 @@ class InfiniGPT(SingleServerIRCBot):
             return None
         channels = [channel for channel in channels if channel.startswith("#")]
         if channels != []:
-            name, lines = await self.respond(
+            name, lines = await self.respond("",
                 sender=None, 
                 messages=[
                     {"role": "system", "content": self.system_prompt}, 
@@ -307,6 +369,8 @@ class InfiniGPT(SingleServerIRCBot):
             else:
                 self.messages[channel][sender].pop(0)
 
+            self.messages[channel][sender] = [m for m in self.messages[channel][sender] if not ((m['role'] == "tool") or ('tool_calls' in m))]
+
     async def ai(self, connection, channel, sender, message, x=False):
         """
         Process user requests and generate LLM responses.
@@ -323,7 +387,7 @@ class InfiniGPT(SingleServerIRCBot):
             message = ' '.join(message[2:])
             if target in self.messages[channel]:
                 await self.add_history("user", channel, target, message)
-                name, lines = await self.respond(target, self.messages[channel][target], sender2=sender)
+                name, lines = await self.respond(channel, target, self.messages[channel][target], sender2=sender, tools=self.tools)
                 lines, joined_lines = await self.thinking(lines)
                 await self.add_history("assistant", channel, target, joined_lines)
             else:
@@ -331,7 +395,7 @@ class InfiniGPT(SingleServerIRCBot):
         else:
             message = ' '.join(message[1:])
             await self.add_history("user", channel, sender, message)
-            name, lines = await self.respond(sender, self.messages[channel][sender])
+            name, lines = await self.respond(channel, sender, self.messages[channel][sender], tools=self.tools)
             lines, joined_lines = await self.thinking(lines)
             await self.add_history("assistant", channel, name, joined_lines)
 
@@ -367,7 +431,7 @@ class InfiniGPT(SingleServerIRCBot):
         
         if respond:
             await self.add_history("user", channel, sender, "introduce yourself")
-            name, lines = await self.respond(sender, self.messages[channel][sender])
+            name, lines = await self.respond(channel, sender, self.messages[channel][sender], tools=self.tools)
             lines, joined_lines = await self.thinking(lines)
             await self.add_history("assistant", channel, name, joined_lines)
             self.log(f"Sending response to {name} in {channel}: '{joined_lines}'")
@@ -425,7 +489,7 @@ class InfiniGPT(SingleServerIRCBot):
             channel (str): Channel to part.
         """
         if channel != None and channel in self.channels:
-            name, lines = await self.respond(
+            name, lines = await self.respond(channel,
                 sender=None, 
                 messages=[
                     {"role": "system", "content": self.system_prompt}, 
@@ -524,7 +588,7 @@ class InfiniGPT(SingleServerIRCBot):
         else:
             await self.add_history("user", "privmsg", sender, ' '.join(message))
             self.log(f"Received private message from {sender}: '{' '.join(message)}'")
-            name, lines = await self.respond(sender, self.messages["privmsg"][sender])
+            name, lines = await self.respond("", sender, self.messages["privmsg"][sender], tools=self.tools)
             lines, joined_lines = await self.thinking(lines)
             await self.add_history("assistant", "privmsg", sender, joined_lines)
             self.log(f"Sending response to {sender}: '{joined_lines}'")
