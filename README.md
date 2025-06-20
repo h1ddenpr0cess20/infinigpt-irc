@@ -8,9 +8,7 @@ Also available for the Matrix chat protocol at [infinigpt-matrix](https://github
 ```
 pip install -r requirements.txt
 ```
-The requirements file contains only the modules that are not part of the
-standard library (`irc` and `httpx`). Their sub‑dependencies will be
-installed automatically.
+
 Get an [OpenAI API](https://platform.openai.com/signup) key, an [xAI API](https://accounts.x.ai/) key, a [Google API](https://aistudio.google.com/apikey) key, and a [Mistral API](https://mistral.ai/) key, if you would like to use those services.  Add those to config.json.  Add/remove the models you would like to be available from the model lists.  
 
 Familiarize yourself with [Ollama](http://ollama.com/), make sure you can run local LLMs.  Install the models you want to use and replace the example Ollama models in config.json.  If you would like to use with Ollama only, you can leave the lists of models for the other services empty.  
