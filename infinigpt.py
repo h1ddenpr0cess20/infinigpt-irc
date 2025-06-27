@@ -72,6 +72,10 @@ class InfiniGPT(SingleServerIRCBot):
             event (IRCEvent): Event details from the server.
         """
         self.log(f"Connected to {self.server}")
+        # Avoid UnicodeDecodeError when encountering non UTF-8 input
+        if hasattr(connection, "buffer"):
+            connection.buffer.errors = "replace"
+            
         if self.password != None:
             connection.privmsg("NickServ", f"IDENTIFY {self.password}")
             self.log("Identifying to NickServ")
