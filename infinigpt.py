@@ -75,7 +75,7 @@ class InfiniGPT(SingleServerIRCBot):
         # Avoid UnicodeDecodeError when encountering non UTF-8 input
         if hasattr(connection, "buffer"):
             connection.buffer.errors = "replace"
-            self.log("Connection buffer errors set to 'replace'")
+            
         if self.password != None:
             connection.privmsg("NickServ", f"IDENTIFY {self.password}")
             self.log("Identifying to NickServ")
