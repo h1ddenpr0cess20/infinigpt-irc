@@ -27,7 +27,6 @@ InfiniGPT is an IRC chatbot powered by multiple OpenAI-compatible providers (Ope
 - [Not a Companion — Please Read](not-a-companion.md)
 - [Development Guide](development.md)
 - [Migration Notes](migration.md)
-- [Refactor Blueprint (historic)](refactor-plan.md)
 - [Legacy → New Map](legacy-map.md)
 - [AI Output Disclaimer](ai-output-disclaimer.md)
 
