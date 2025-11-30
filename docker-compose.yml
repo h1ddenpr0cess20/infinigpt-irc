@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  bot:
+    build: .
+    image: infinigpt-irc:latest
+    restart: unless-stopped
+    volumes:
+      - ./config.json:/app/config.json:ro
+    environment:
+      - INFINIGPT_OLLAMA_URL=http://host.docker.internal:11434
+      - INFINIGPT_LMSTUDIO_URL=http://host.docker.internal:1234
+      - INFINIGPT_LOG_FORMAT=plain
+    # network_mode: host  # uncomment if your IRC/Ollama/LM Studio require host networking
