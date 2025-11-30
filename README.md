@@ -1,61 +1,46 @@
 # infinigpt-irc
-InfiniGPT is an asynchronous, multi-channel AI chatbot for IRC, with a great prompt which allows it to roleplay as almost anything you can think of.  It supports OpenAI, xAI, Google and Ollama models. You can set any default personality you would like.  It can be changed at any time, and each user has their own separate chat history with their chosen personality setting.  Users can interact with each others chat histories for collaboration if they would like, but otherwise, conversations are separated.  
 
-Also available for the Matrix chat protocol at [infinigpt-matrix](https://github.com/h1ddenpr0cess20/infinigpt-matrix/)
+InfiniGPT IRC is a modular IRC chatbot that talks to multiple OpenAI-compatible providers (OpenAI, xAI, Anthropic, Google, Mistral, LM Studio, Ollama) while tracking per-user histories and personas.
 
-## Setup
+## Why InfiniGPT?
 
-```
-pip install -r requirements.txt
-```
+- Multi-provider routing with model lists per vendor and hot-swappable defaults.
+- Per-user personalities, shared histories, and cross-user replies via `.x` and persona commands.
+- Built-in and custom tools, including Model Context Protocol (MCP) servers for function calling.
+- Admin/ops controls for model changes, resets, verbosity, and channel permissions from IRC.
+- Ships as a Python package, Docker image, or bare script for flexible deployment.
 
-Get an [OpenAI API](https://platform.openai.com/signup) key, an [xAI API](https://accounts.x.ai/) key, a [Google API](https://aistudio.google.com/apikey) key, and a [Mistral API](https://mistral.ai/) key, if you would like to use those services.  Add those to config.json.  Add/remove the models you would like to be available from the model lists.  
+## Quick Start
 
-Familiarize yourself with [Ollama](http://ollama.com/), make sure you can run local LLMs.  Install the models you want to use and replace the example Ollama models in config.json.  If you would like to use with Ollama only, you can leave the lists of models for the other services empty.  
+1. Clone the repo and create a virtual environment:
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+2. Copy `config.json` (or tailor it) with your IRC server, channels, and provider credentials.
+3. Export API keys for the providers you plan to call (see `llm.api_keys` in the config schema).
+4. Start the bot:
+   ```bash
+   python -m infinigpt_irc -c config.json
+   # legacy entry point
+   python infinigpt.py
+   ```
 
-Fill in the irc credentials in config.json.  
-Password is optional, but it is recommended because registration is required for some channels, and some users may not be able to privately message the bot unless it has identified to the server.
+## Documentation
 
-You can add your own tools to the tools.py file and add them to the schema.json file.  I have included a crypto price tool as an example.
+Everything lives in `docs/`. Start with [`docs/index.md`](docs/index.md) and dive deeper:
 
-## Use
-```
-python infinigpt.py
-```  
-**.ai** _message_ or **botname:** _message_  
-    Basic usage.  You can also privately message the bot without using these commands.
-    
-**.x** _user_ _message_  
-    This allows you to talk to another user's chat history.  
-    _user_ is the display name of the user whose history you want to use
-     
-**.persona** _personality_  
-    Changes the personality.  It can be a character, personality type, object, idea.  
-    Don't use a custom system prompt here.
+- [`docs/getting-started.md`](docs/getting-started.md) for end-to-end setup
+- [`docs/configuration.md`](docs/configuration.md) for every config option
+- [`docs/commands.md`](docs/commands.md) for the IRC command surface
+- [`docs/tools-and-mcp.md`](docs/tools-and-mcp.md) for tool and MCP wiring
+- [`docs/ollama.md`](docs/ollama.md) + [`docs/docker.md`](docs/docker.md) for deployment extras
+- [`docs/operations.md`](docs/operations.md) & [`docs/security.md`](docs/security.md) for running in production
+- [`docs/architecture.md`](docs/architecture.md) & [`docs/development.md`](docs/development.md) for contributors
 
-**.custom** _prompt_  
-    Set a custom system prompt
-        
-**.reset**  
-    Reset to preset personality
-    
-**.stock**  
-    Remove personality and reset to standard GPT settings
+See `docs/not-a-companion.md` if you're deploying in shared or sensitive communities.
 
-**.model**  
-    List available large language models
+## License
 
-**.model** _modelname_  
-    Change model
-
-**.join** _channel_   
-    Join a channel
-
-**.part** _channel_   
-    Leave a channel.  You can omit channel to part channel command was issued in.
-
-**.gpersona** _personality_  
-    Set a new default personality.
-
-**.help** _botname_  
-    Display the help menu
+GNU AGPL-3.0 — see [`LICENSE`](LICENSE).
