@@ -1,6 +1,6 @@
 # infinigpt-irc
 
-InfiniGPT IRC is an asynchronous, multi-provider AI chatbot for IRC inspired by the modular [ollamarama-irc](https://github.com/h1ddenpr0cess20/ollamarama-irc) refactor.  
+InfiniGPT IRC is an asynchronous, multi-provider AI chatbot for IRC.  
 It keeps per-user histories, supports roleplay personas, can call tools via MCP servers, and speaks OpenAI-compatible APIs including OpenAI, xAI, Google Gemini (OpenAI compatibility layer), Mistral, LM Studio, and local Ollama.
 
 ## Features
