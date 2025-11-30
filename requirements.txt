@@ -1,2 +1,5 @@
 irc
 httpx
+fastmcp
+rich
+requests

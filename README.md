@@ -1,61 +1,108 @@
 # infinigpt-irc
-InfiniGPT is an asynchronous, multi-channel AI chatbot for IRC, with a great prompt which allows it to roleplay as almost anything you can think of.  It supports OpenAI, xAI, Google and Ollama models. You can set any default personality you would like.  It can be changed at any time, and each user has their own separate chat history with their chosen personality setting.  Users can interact with each others chat histories for collaboration if they would like, but otherwise, conversations are separated.  
 
-Also available for the Matrix chat protocol at [infinigpt-matrix](https://github.com/h1ddenpr0cess20/infinigpt-matrix/)
+InfiniGPT IRC is an asynchronous, multi-provider AI chatbot for IRC inspired by the modular [ollamarama-irc](https://github.com/h1ddenpr0cess20/ollamarama-irc) refactor.  
+It keeps per-user histories, supports roleplay personas, can call tools via MCP servers, and speaks OpenAI-compatible APIs including OpenAI, xAI, Google Gemini (OpenAI compatibility layer), Mistral, LM Studio, and local Ollama.
+
+## Features
+
+- **Multiple providers** – use OpenAI, xAI, Anthropic (OpenAI-compatible endpoint), Google Gemini, Mistral, LM Studio, or Ollama by listing models per provider in `config.json`.
+- **Personas & prompts** – each user has an independent personality and conversation history with `.persona`, `.custom`, `.reset`, `.stock`, `.gpersona`.
+- **Collaborative chats** – `.x user message` talks to another user's history while replying back to the sender.
+- **Tool calling** – built-in tools plus `fastmcp` support for Model Context Protocol servers; custom tools come from `tools.py` + `schema.json`.
+- **Admin controls** – change models, clear history, toggle verbosity, and manage channels from IRC.
+- **Modular package** – run via `python -m infinigpt_irc` or installable package ready for Docker/packaging workflows.
 
 ## Setup
 
-```
-pip install -r requirements.txt
-```
+1. **Clone / download** this repository.
+2. **Create a virtual environment** and install dependencies:
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+3. **Edit `config.json`** with your IRC credentials and model providers.
+4. **Add API keys** for the providers you plan to use (`llm.api_keys`).
+5. **(Optional) Install Ollama and/or LM Studio** if you want to run local models. Make sure you can `ollama pull llama3` or start an LM Studio local server (`lmstudio --server`) before using their models.  
+6. **(Optional) Configure MCP servers** under `llm.mcp_servers` or add more builtin tools via `tools.py` and `schema.json`.
 
-Get an [OpenAI API](https://platform.openai.com/signup) key, an [xAI API](https://accounts.x.ai/) key, a [Google API](https://aistudio.google.com/apikey) key, and a [Mistral API](https://mistral.ai/) key, if you would like to use those services.  Add those to config.json.  Add/remove the models you would like to be available from the model lists.  
+### Configuration Overview
 
-Familiarize yourself with [Ollama](http://ollama.com/), make sure you can run local LLMs.  Install the models you want to use and replace the example Ollama models in config.json.  If you would like to use with Ollama only, you can leave the lists of models for the other services empty.  
+`config.json` has two sections:
 
-Fill in the irc credentials in config.json.  
-Password is optional, but it is recommended because registration is required for some channels, and some users may not be able to privately message the bot unless it has identified to the server.
+- `irc`: `server`, `port`, `nickname`, optional `password`, list of `channels`, and admin nicknames.
+- `llm`:
+  - `models`: mapping of provider → list of model IDs (`"openai": ["gpt-4o-mini"]`, `"anthropic": ["claude-3-5-sonnet-20240620"]`, `"ollama": ["llama3.2"]`, etc.)
+  - `api_keys`: provider → API key (OpenAI/xAI/Anthropic/Google/Mistral). Providers without keys are skipped.
+  - `default_model`: the model name to start with (must exist in `models`).
+  - `personality` & `prompt`: default persona template array `[prefix, suffix, optional_extra]`.
+  - `options`: OpenAI-style generation parameters (temperature, top_p, frequency_penalty, etc.) applied to all non-Google providers.
+  - `history_size`: number of messages to keep per user/channel.
+  - `ollama_url`: base URL or host:port for local Ollama (`localhost:11434` works).
+  - `lmstudio_url`: OpenAI-compatible base URL (host:port) for LM Studio's local server (`localhost:1234` by default).
+  - `timeout`: request timeout seconds (optional, defaults to 120).
+  - `mcp_servers`: optional mapping of MCP server names to commands/URLs for tool discovery.
+  - `verbose`: when true, disables the short prompt suffix for extra detail.
 
-You can add your own tools to the tools.py file and add them to the schema.json file.  I have included a crypto price tool as an example.
+Environment overrides:
 
-## Use
-```
+- `INFINIGPT_MODEL`: override `llm.default_model`.
+- `INFINIGPT_IRC_SERVER`: override `irc.server`.
+- `INFINIGPT_OLLAMA_URL`: override `llm.ollama_url`.
+- `INFINIGPT_LMSTUDIO_URL`: override `llm.lmstudio_url`.
+- `INFINIGPT_LOG_FORMAT`: choose `auto|rich|plain|json`.
+
+## Usage
+
+Start the bot with either command:
+
+```bash
+python -m infinigpt_irc -c config.json
+# or legacy entry point
 python infinigpt.py
-```  
-**.ai** _message_ or **botname:** _message_  
-    Basic usage.  You can also privately message the bot without using these commands.
-    
-**.x** _user_ _message_  
-    This allows you to talk to another user's chat history.  
-    _user_ is the display name of the user whose history you want to use
-     
-**.persona** _personality_  
-    Changes the personality.  It can be a character, personality type, object, idea.  
-    Don't use a custom system prompt here.
+```
 
-**.custom** _prompt_  
-    Set a custom system prompt
-        
-**.reset**  
-    Reset to preset personality
-    
-**.stock**  
-    Remove personality and reset to standard GPT settings
+Helpful CLI flags:
 
-**.model**  
-    List available large language models
+- `--ollama-url http://host:11434` – override Ollama endpoint for this run.
+- `--lmstudio-url http://host:1234` – override the LM Studio OpenAI-compatible endpoint.
+- `--model <name>` – set the default model (use `.model` later to switch).
+- `--verbose` – start with verbose prompts (extra suffix disabled).
+- `--server-models` – list models reported by the configured local servers (Ollama and/or LM Studio) and exit.
+- `--log-format rich|plain|json` – control log output (defaults to smart auto-detection).
 
-**.model** _modelname_  
-    Change model
+If installed as a package (`pip install .`), the entry command is `infinigpt-irc`.
 
-**.join** _channel_   
-    Join a channel
+## Commands
 
-**.part** _channel_   
-    Leave a channel.  You can omit channel to part channel command was issued in.
+| Command | Description |
+|---------|-------------|
+| `.ai message` or `botname: message` | Talk to the bot in the channel. |
+| `.x user message` | Borrow another user's conversation while replying to you. |
+| `.persona personality` | Change your persona (characters, ideas, anything). |
+| `.custom prompt` | Set a custom system message instead of persona template. |
+| `.reset` | Reset to the default persona. |
+| `.stock` | Remove persona and use provider stock instructions. |
+| `.help <bot>` | Receive the help text via NOTICE (admins also get admin commands). |
+| `.model` | Show the current model and available provider:model entries. *(admin)* |
+| `.model <name>` | Switch to a model (supports `provider:model`). *(admin)* |
+| `.clear` | Wipe all histories and reset defaults. *(admin)* |
+| `.verbose [on|off|toggle]` | Control whether the optional suffix is used. *(admin)* |
+| `.gpersona personality` | Set a new global default persona. *(admin)* |
+| `.join #chan` / `.part #chan` | Join or leave IRC channels. *(admin)* |
 
-**.gpersona** _personality_  
-    Set a new default personality.
+Private messages support the same persona commands and simple chatting, mirroring the `.ai` behavior.
 
-**.help** _botname_  
-    Display the help menu
+## Tools & MCP
+
+- Builtin tools live in `infinigpt_irc/tools/` with a default `schema.json`.
+- Custom tools can be added by editing the top-level `tools.py` and `schema.json`. The package automatically merges your schema and imports your functions.
+- Model Context Protocol servers can be defined under `llm.mcp_servers`. The bot will load tools once at startup via [`fastmcp`](https://github.com/modelcontextprotocol/fastmcp) and expose them to tool-capable models.
+
+## Development Notes
+
+- The project uses the AGPLv3 license (same as upstream).
+- The codebase now mirrors the modular structure of ollamarama-irc for easier maintenance and packaging.
+- Run tests or linting as needed; the repo currently focuses on runtime behavior.
+
+Enjoy InfiniGPT on IRC! PRs and issues are welcome.
